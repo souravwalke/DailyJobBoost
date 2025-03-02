@@ -2,6 +2,7 @@ import { DataSource } from "typeorm";
 import { User } from "../models/User";
 import { Quote } from "../models/Quote";
 import { EmailLog } from "../models/EmailLog";
+import { Admin } from "../models/Admin";
 import dotenv from "dotenv";
 import path from "path";
 
@@ -16,7 +17,7 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME || "dailyjobboost",
   synchronize: process.env.NODE_ENV !== "production",
   logging: process.env.NODE_ENV !== "production",
-  entities: [User, Quote, EmailLog],
+  entities: [User, Quote, EmailLog, Admin],
   migrations: [path.join(__dirname, "../migrations/*.ts")],
   subscribers: [],
 }); 

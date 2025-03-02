@@ -2,11 +2,13 @@ import { Router } from "express";
 import { AppDataSource } from "../config/database";
 import { User } from "../models/User";
 import { EmailService } from "../services/EmailService";
+import { CronService } from "../services/CronService";
 import { z } from "zod";
 
 const router = Router();
 const userRepository = AppDataSource.getRepository(User);
 const emailService = new EmailService();
+const cronService = new CronService();
 
 // Validation schema
 const subscribeSchema = z.object({
@@ -120,6 +122,21 @@ router.post("/unsubscribe", async (req, res) => {
         message: "Failed to unsubscribe. Please try again later.",
       });
     }
+  }
+});
+
+// Test endpoint to trigger daily emails
+router.post("/test-daily-emails", async (req, res) => {
+  try {
+    await cronService.testSendEmails();
+    res.status(200).json({
+      message: "Test emails triggered successfully. Check server logs for details.",
+    });
+  } catch (error) {
+    console.error("Failed to trigger test emails:", error);
+    res.status(500).json({
+      message: "Failed to trigger test emails. Check server logs for details.",
+    });
   }
 });
 

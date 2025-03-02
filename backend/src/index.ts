@@ -3,6 +3,8 @@ import cors from "cors";
 import { AppDataSource } from "./config/database";
 import { CronService } from "./services/CronService";
 import { userRouter } from "./routes/users";
+import quoteRouter from "./routes/quotes";
+import authRouter from "./routes/auth";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -23,7 +25,9 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 // Routes
+app.use("/api/auth", authRouter);
 app.use("/api/users", userRouter);
+app.use("/api/quotes", quoteRouter);
 
 // Initialize database connection
 AppDataSource.initialize()
