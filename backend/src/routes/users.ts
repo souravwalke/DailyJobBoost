@@ -1,10 +1,12 @@
 import { Router } from "express";
 import { AppDataSource } from "../config/database";
 import { User } from "../models/User";
+import { EmailService } from "../services/EmailService";
 import { z } from "zod";
 
 const router = Router();
 const userRepository = AppDataSource.getRepository(User);
+const emailService = new EmailService();
 
 // Validation schema
 const subscribeSchema = z.object({
@@ -34,7 +36,11 @@ router.post("/subscribe", async (req, res) => {
       });
     }
 
+    // Save user
     await userRepository.save(user);
+
+    // Send welcome email
+    await emailService.sendWelcomeEmail(user);
 
     res.status(200).json({
       message: "Successfully subscribed to daily motivational quotes!",
@@ -54,7 +60,36 @@ router.post("/subscribe", async (req, res) => {
   }
 });
 
-// Unsubscribe endpoint
+// Unsubscribe endpoint with token
+router.get("/unsubscribe/:token", async (req, res) => {
+  try {
+    const { token } = req.params;
+    
+    // Verify token and get user
+    const user = await emailService.verifyUnsubscribeToken(token);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "Invalid or expired unsubscribe link",
+      });
+    }
+
+    // Update user status
+    user.isActive = false;
+    await userRepository.save(user);
+
+    res.status(200).json({
+      message: "Successfully unsubscribed from daily motivational quotes.",
+    });
+  } catch (error) {
+    console.error("Unsubscribe error:", error);
+    res.status(500).json({
+      message: "Failed to unsubscribe. Please try again later.",
+    });
+  }
+});
+
+// Manual unsubscribe endpoint (for testing)
 router.post("/unsubscribe", async (req, res) => {
   try {
     const { email } = z.object({ email: z.string().email() }).parse(req.body);
