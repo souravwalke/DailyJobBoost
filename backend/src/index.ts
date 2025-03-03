@@ -71,11 +71,23 @@ const connectWithRetry = async (retries = 10, interval = 3000) => {
   for (let i = 0; i < retries; i++) {
     try {
       console.log(`Database connection attempt ${i + 1}/${retries}`);
-      await AppDataSource.initialize();
-      console.log("Database connection established successfully");
-      return true;
+      if (!AppDataSource.isInitialized) {
+        await AppDataSource.initialize();
+        console.log("Database connection established successfully");
+        return true;
+      } else {
+        console.log("Database already initialized");
+        return true;
+      }
     } catch (error: any) {
-      console.error(`Database connection attempt ${i + 1} failed:`, error.message || 'Unknown error');
+      console.error(`Database connection attempt ${i + 1} failed:`, {
+        message: error.message,
+        code: error.code,
+        errno: error.errno,
+        syscall: error.syscall,
+        address: error.address,
+        port: error.port
+      });
       if (i < retries - 1) {
         console.log(`Retrying in ${interval/1000} seconds...`);
         await new Promise(resolve => setTimeout(resolve, interval));
