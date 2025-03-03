@@ -22,7 +22,7 @@ export default function Home() {
     setIsLoading(true);
     
     try {
-      const response = await fetch("http://localhost:3001/api/users/subscribe", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/subscribe`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -59,7 +59,7 @@ export default function Home() {
           <div className="flex items-center justify-center">
             <h1 className="text-2xl font-bold tracking-tight text-blue-600 dark:text-blue-400 flex items-center gap-2">
               <Sparkles className="h-5 w-5" />
-              DailyJobBoost
+              HypeMeUp
             </h1>
           </div>
         </header>
@@ -83,7 +83,7 @@ export default function Home() {
                       Start Your Day Inspired
                     </h2>
                     <p className="text-slate-600 dark:text-slate-400">
-                      Receive a daily motivational affirmation to boost your job search journey.
+                      Ignite your potential with daily affirmations that empower you.
                     </p>
                   </div>
                   <form onSubmit={handleSubmit} className="space-y-4">
@@ -136,7 +136,7 @@ export default function Home() {
           </div>
         </main>
         <footer className="container mx-auto py-6 px-4 text-center text-slate-500 dark:text-slate-400 text-sm">
-          <p>© {new Date().getFullYear()} DailyJobBoost. Empowering job seekers with daily motivation.</p>
+          <p>© {new Date().getFullYear()} HypeMeUp. Made with ❤️ by Sourav Walke.</p>
         </footer>
       </div>
 
