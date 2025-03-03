@@ -29,6 +29,11 @@ app.use("/api/auth", authRouter);
 app.use("/api/users", userRouter);
 app.use("/api/quotes", quoteRouter);
 
+// Add health check endpoint
+app.get("/api/health", (_, res) => {
+  res.status(200).json({ status: "healthy" });
+});
+
 // Initialize database connection
 AppDataSource.initialize()
   .then(() => {
