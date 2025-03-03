@@ -5,6 +5,8 @@ node_modules/
 
 # Environment variables
 .env
+.env.*
+!.env.example
 .env.local
 .env.development.local
 .env.test.local
@@ -36,10 +38,29 @@ next-env.d.ts
 
 # Testing
 coverage/
+.nyc_output/
 
 # Debug
 .debug/
+debug.log
+
+# Backend specific
+backend/dist/
+backend/node_modules/
+backend/.env
+backend/logs/
+
+# Frontend specific
+frontend/.next/
+frontend/node_modules/
+frontend/.env
+frontend/out/
+frontend/build/
+frontend/.vercel/
 
 # Misc
 .DS_Store
-Thumbs.db 
+Thumbs.db
+*.pem
+.vercel
+.cache/ 
