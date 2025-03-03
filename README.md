@@ -1,6 +1,6 @@
-# DailyJobBoost
+# HypeMeUp
 
-DailyJobBoost is a motivational email service that sends daily inspirational quotes to job seekers, helping them stay motivated during their job search journey. It features smart quote rotation, timezone-based delivery, and a secure admin interface for content management.
+HypeMeUp is a motivational email service that sends daily inspirational quotes to job seekers, helping them stay motivated during their job search journey. It features smart quote rotation, timezone-based delivery, and a secure admin interface for content management.
 
 ## Features
 
@@ -71,8 +71,8 @@ DailyJobBoost is a motivational email service that sends daily inspirational quo
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/dailyjobboost.git
-cd dailyjobboost
+git clone https://github.com/yourusername/hypemeup.git
+cd hypemeup
 ```
 
 2. Install dependencies:
