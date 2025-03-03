@@ -13,11 +13,11 @@ RUN npm install
 # Copy the backend application files
 COPY backend/ .
 
-# Build the application
+# Build TypeScript
 RUN npm run build
 
 # Expose the port
 EXPOSE 3001
 
-# Start the application
-CMD ["npm", "start"] 
+# Start command that includes migrations
+CMD npm run prepare:prod && npm start 
