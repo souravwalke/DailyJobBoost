@@ -16,6 +16,7 @@ const PORT = process.env.PORT || 3001;
 console.log('Starting server with configuration:', {
   NODE_ENV: process.env.NODE_ENV,
   PORT: PORT,
+  DATABASE_URL: process.env.DATABASE_URL ? '(Railway URL configured)' : '(not set)',
   DB_HOST: process.env.DB_HOST,
   DB_PORT: process.env.DB_PORT,
   DB_NAME: process.env.DB_NAME,
