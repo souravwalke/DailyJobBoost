@@ -37,7 +37,7 @@ export class CronService {
 
     timezones.forEach(tz => {
       // Calculate when 9 AM occurs in each timezone
-      const hour = (9 - tz.offset + 24) % 24;
+      const hour = Math.round((9 - tz.offset + 24) % 24);
       const cronExpression = `0 ${hour} * * *`;
       console.log(`Scheduling job for timezone ${tz.id} (UTC+${tz.offset}) at ${hour}:00 UTC (${cronExpression})`);
       
