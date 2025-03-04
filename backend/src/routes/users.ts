@@ -1,199 +1,59 @@
 import express from "express";
 import { AppDataSource } from "../config/database";
 import { User } from "../models/User";
-import { CronService } from "../services/CronService";
 import { EmailService } from "../services/EmailService";
 import { z } from "zod";
 import { QuoteRotationService } from "../services/QuoteRotationService";
+import { toZonedTime } from "date-fns-tz";
 
 const router = express.Router();
 const userRepository = AppDataSource.getRepository(User);
-const cronService = new CronService();
 const emailService = new EmailService();
 const quoteRotationService = new QuoteRotationService();
-
-// Validation schema
-const subscribeSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  timezone: z.string().min(1, "Timezone is required"),
-});
 
 // Subscribe endpoint
 router.post("/subscribe", async (req, res) => {
   try {
-    // Validate request body
+    const subscribeSchema = z.object({
+      email: z.string().email(),
+      timezone: z.string(),
+    });
+
     const { email, timezone } = subscribeSchema.parse(req.body);
 
-    // Check if user already exists
+    // Save or update user
     let user = await userRepository.findOne({ where: { email } });
-
     if (user) {
-      // Update existing user
       user.timezone = timezone;
       user.isActive = true;
     } else {
-      // Create new user
-      user = userRepository.create({
-        email,
-        timezone,
-        isActive: true,
-      });
+      user = userRepository.create({ email, timezone, isActive: true });
     }
-
-    // Save user
     await userRepository.save(user);
 
     // Send welcome email
     await emailService.sendWelcomeEmail(user);
 
-    res.status(200).json({
-      message: "Successfully subscribed to daily motivational quotes!",
-    });
+    // Send today's quote if it's before 9 AM in their timezone
+    const now = new Date();
+    const userTime = toZonedTime(now, timezone);
+    const targetTime = new Date(userTime);
+    targetTime.setHours(9, 0, 0, 0);
+
+    if (userTime < targetTime) {
+      const quote = await quoteRotationService.getNextQuoteForTimezone([user]);
+      await emailService.sendDailyQuote(user, quote);
+    }
+
+    res.status(200).json({ message: "Successfully subscribed to daily quotes" });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      res.status(400).json({
-        message: "Validation error",
-        errors: error.errors,
-      });
+      res.status(400).json({ error: error.errors });
     } else {
-      console.error("Subscription error:", error);
-      res.status(500).json({
-        message: "Failed to subscribe. Please try again later.",
-      });
+      console.error("Error in subscription:", error);
+      res.status(500).json({ error: "Failed to subscribe" });
     }
   }
 });
 
-// Unsubscribe endpoint with token
-router.get("/unsubscribe/:token", async (req, res) => {
-  try {
-    const { token } = req.params;
-    
-    // Verify token and get user
-    const user = await emailService.verifyUnsubscribeToken(token);
-
-    if (!user) {
-      return res.status(404).json({
-        message: "Invalid or expired unsubscribe link",
-      });
-    }
-
-    // Update user status
-    user.isActive = false;
-    await userRepository.save(user);
-
-    res.status(200).json({
-      message: "Successfully unsubscribed from daily motivational quotes.",
-    });
-  } catch (error) {
-    console.error("Unsubscribe error:", error);
-    res.status(500).json({
-      message: "Failed to unsubscribe. Please try again later.",
-    });
-  }
-});
-
-// Manual unsubscribe endpoint (for testing)
-router.post("/unsubscribe", async (req, res) => {
-  try {
-    const { email } = z.object({ email: z.string().email() }).parse(req.body);
-
-    const user = await userRepository.findOne({ where: { email } });
-
-    if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
-    }
-
-    user.isActive = false;
-    await userRepository.save(user);
-
-    res.status(200).json({
-      message: "Successfully unsubscribed from daily motivational quotes.",
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({
-        message: "Validation error",
-        errors: error.errors,
-      });
-    } else {
-      console.error("Unsubscribe error:", error);
-      res.status(500).json({
-        message: "Failed to unsubscribe. Please try again later.",
-      });
-    }
-  }
-});
-
-// Test endpoint to trigger daily emails
-router.post("/test-daily-emails", async (req, res) => {
-  try {
-    await cronService.testSendEmails();
-    res.status(200).json({
-      message: "Test emails triggered successfully. Check server logs for details.",
-    });
-  } catch (error) {
-    console.error("Failed to trigger test emails:", error);
-    res.status(500).json({
-      message: "Failed to trigger test emails. Check server logs for details.",
-    });
-  }
-});
-
-// Test endpoint to manually trigger daily email
-router.post("/test-daily-email", async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({
-        status: "error",
-        code: 400,
-        message: "Email is required",
-      });
-    }
-
-    // Find the user
-    const user = await userRepository.findOne({
-      where: { email },
-    });
-
-    if (!user) {
-      return res.status(404).json({
-        status: "error",
-        code: 404,
-        message: "User not found",
-      });
-    }
-
-    // Get next quote using rotation service
-    const quote = await quoteRotationService.getNextQuoteForTimezone([user]);
-
-    // Send the email
-    await emailService.sendDailyQuote(user, quote);
-
-    return res.json({
-      status: "success",
-      message: "Test email sent successfully",
-      data: {
-        email: user.email,
-        timezone: user.timezone,
-        quote: {
-          content: quote.content,
-          author: quote.author,
-        },
-      },
-    });
-  } catch (error) {
-    console.error("Error in test email endpoint:", error);
-    return res.status(500).json({
-      status: "error",
-      code: 500,
-      message: "Failed to send test email",
-    });
-  }
-});
-
-export const userRouter = router; 
+export default router; 
