@@ -63,7 +63,9 @@ export class CronService {
     
     if (testTime > currentTimePST) {
       // Convert to UTC for cron scheduling
-      const targetTimeUTC = new Date(testTime.getTime() + (8 * 60 * 60 * 1000)); // Add 8 hours for PST->UTC
+      const targetTimeUTC = new Date(testTime.toLocaleString('en-US', { 
+        timeZone: 'UTC' 
+      }));
       const minutes = targetTimeUTC.getMinutes();
       const hours = targetTimeUTC.getHours();
       const testCronExpression = `${minutes} ${hours} * * *`;
@@ -71,14 +73,14 @@ export class CronService {
       console.log(`[TEST] Creating one-time job with cron expression: ${testCronExpression}`);
       console.log(`[TEST] Job will run at: ${testTime.toLocaleString('en-US', { 
         timeZone: 'America/Los_Angeles' 
-      })} PST`);
+      })} PST (${targetTimeUTC.toISOString()} UTC)`);
       
       const testJob = cron.schedule(testCronExpression, () => {
         console.log('----------------------------------------');
-        console.log(`[TEST] One-time job triggered at ${new Date().toISOString()}`);
+        console.log(`[TEST] One-time job triggered at ${new Date().toISOString()} UTC`);
         console.log(`[TEST] Local time: ${new Date().toLocaleString('en-US', { 
           timeZone: 'America/Los_Angeles' 
-        })}`);
+        })} PST`);
         this.sendEmailsForTimezone('America/Los_Angeles');
         testJob.stop(); // Stop the job after it runs once
         console.log('[TEST] Job stopped after successful execution');
