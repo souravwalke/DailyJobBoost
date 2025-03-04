@@ -32,7 +32,13 @@ const getDatabaseConfig = () => {
       entities: [User, Quote, EmailLog, Admin],
       migrations: [path.join(__dirname, "../migrations/*.{ts,js}")],
       migrationsRun: true,
-      synchronize: false
+      synchronize: false,
+      connectTimeoutMS: 30000, // 30 seconds timeout
+      extra: {
+        max: 20, // Maximum number of connections in the pool
+        idleTimeoutMillis: 30000, // How long a connection can be idle before being closed
+        connectionTimeoutMillis: 30000, // How long to wait for a connection
+      }
     };
   }
 
@@ -53,14 +59,14 @@ const getDatabaseConfig = () => {
     entities: [User, Quote, EmailLog, Admin],
     migrations: [path.join(__dirname, "../migrations/*.{ts,js}")],
     migrationsRun: process.env.NODE_ENV === "production",
-    synchronize: false // Disable synchronize in all environments
+    synchronize: false, // Disable synchronize in all environments
+    connectTimeoutMS: 30000, // 30 seconds timeout
+    extra: {
+      max: 20, // Maximum number of connections in the pool
+      idleTimeoutMillis: 30000, // How long a connection can be idle before being closed
+      connectionTimeoutMillis: 30000, // How long to wait for a connection
+    }
   };
 };
 
-const dbConfig = getDatabaseConfig();
-
-export const AppDataSource = new DataSource({
-  ...dbConfig,
-  logging: process.env.NODE_ENV !== "production", // Only enable logging in development
-  subscribers: []
-}); 
+export const AppDataSource = new DataSource(getDatabaseConfig()); 

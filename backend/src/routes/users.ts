@@ -8,7 +8,7 @@ import { z } from "zod";
 const router = express.Router();
 const userRepository = AppDataSource.getRepository(User);
 const cronService = new CronService();
-const emailService = EmailService.getInstance();
+const emailService = new EmailService();
 
 // Validation schema
 const subscribeSchema = z.object({
