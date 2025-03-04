@@ -21,6 +21,7 @@ export class CronService {
 
   startDailyEmailJobs() {
     console.log("Starting to schedule daily email jobs...");
+    console.log(`Current server time: ${new Date().toISOString()}`);
     
     // Schedule for each timezone
     const timezones = [
@@ -45,7 +46,7 @@ export class CronService {
       if (nextRun < now) {
         nextRun.setDate(nextRun.getDate() + 1);
       }
-      console.log(`- ${tz.id} (UTC+${tz.offset}): Next run at ${nextRun.toISOString()}`);
+      console.log(`- ${tz.id} (UTC+${tz.offset}): Next run at ${nextRun.toISOString()} (${nextRun.toLocaleString()})`);
     });
 
     timezones.forEach(tz => {
@@ -55,13 +56,14 @@ export class CronService {
       console.log(`Scheduling job for timezone ${tz.id} (UTC+${tz.offset}) at ${hour}:00 UTC (${cronExpression})`);
       
       const job = cron.schedule(cronExpression, () => {
-        console.log(`Cron job triggered for timezone ${tz.id} at ${new Date().toISOString()}`);
+        console.log(`[CRON] Job triggered for timezone ${tz.id} at ${new Date().toISOString()}`);
+        console.log(`[CRON] Current server time: ${new Date().toISOString()}`);
         this.sendEmailsForTimezone(tz.id);
       });
 
       // Start the job and log success
       job.start();
-      console.log(`Successfully scheduled job for timezone ${tz.id}`);
+      console.log(`[CRON] Successfully scheduled job for timezone ${tz.id}`);
     });
 
     console.log("Daily email jobs scheduling completed");
