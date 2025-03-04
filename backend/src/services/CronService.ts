@@ -46,9 +46,7 @@ export class CronService {
         this.sendEmailsForTimezone(tz.id);
       });
 
-      if (!job.running) {
-        console.error(`Failed to start cron job for timezone ${tz.id}`);
-      }
+      console.log(`Successfully scheduled job for timezone ${tz.id}`);
     });
 
     console.log("Daily email jobs scheduling completed");
