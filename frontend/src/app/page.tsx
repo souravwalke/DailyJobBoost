@@ -83,7 +83,7 @@ export default function Home() {
                       Start Your Day Inspired
                     </h2>
                     <p className="text-slate-600 dark:text-slate-400">
-                      Ignite your potential with daily affirmations that empower you.
+                    Ignite your potential with daily affirmations that empower you to take charge and thrive every day.
                     </p>
                   </div>
                   <form onSubmit={handleSubmit} className="space-y-4">
