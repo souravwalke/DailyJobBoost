@@ -6,7 +6,7 @@ dotenv.config();
 async function checkSchema() {
   try {
     console.log('Checking database schema...');
-    
+
     if (!AppDataSource.isInitialized) {
       console.log('Initializing database connection...');
       await AppDataSource.initialize();
