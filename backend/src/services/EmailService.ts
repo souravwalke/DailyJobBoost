@@ -27,6 +27,7 @@ export class EmailService {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
+      name: "HypeMeUp", // Explicitly set the name
     });
   }
 
@@ -48,7 +49,10 @@ export class EmailService {
       const emailContent = EmailTemplateService.getWelcomeTemplate(unsubscribeToken);
       
       const emailConfig = {
-        from: process.env.EMAIL_FROM || "welcome@hypemeup.com",
+        from: {
+          name: "HypeMeUp",
+          address: process.env.SMTP_USER || "noreply@hypemeup.com"
+        },
         to: user.email,
         subject: "Welcome to HypeMeUp! 🎉",
         html: emailContent,
@@ -79,7 +83,10 @@ export class EmailService {
       const emailContent = EmailTemplateService.getDailyQuoteTemplate(quote, unsubscribeToken);
       
       await this.transporter.sendMail({
-        from: process.env.EMAIL_FROM || "motivation@hypemeup.com",
+        from: {
+          name: "HypeMeUp",
+          address: process.env.SMTP_USER || "noreply@hypemeup.com"
+        },
         to: user.email,
         subject: "Your Daily Motivation 🌟",
         html: emailContent,
