@@ -11,10 +11,10 @@ dotenv.config();
 // Log all environment variables related to database (excluding sensitive data)
 console.log('Database Configuration:', {
   DATABASE_URL: process.env.DATABASE_URL ? 'Present' : 'Missing',
-  DB_HOST: process.env.DB_HOST,
-  DB_PORT: process.env.DB_PORT,
-  DB_NAME: process.env.DB_NAME,
-  DB_USERNAME: process.env.DB_USERNAME,
+  DB_HOST: process.env.DB_HOST ? 'Present' : 'Missing',
+  DB_PORT: process.env.DB_PORT ? 'Present' : 'Missing',
+  DB_NAME: process.env.DB_NAME ? 'Present' : 'Missing',
+  DB_USERNAME: process.env.DB_USERNAME ? 'Present' : 'Missing',
   NODE_ENV: process.env.NODE_ENV
 });
 
@@ -27,28 +27,33 @@ const getDatabaseConfig = () => {
       url: process.env.DATABASE_URL,
       type: "postgres" as const,
       ssl: {
-        rejectUnauthorized: false // Required for Railway's SSL connection
+        rejectUnauthorized: true // Enable SSL verification
       },
       entities: [User, Quote, EmailLog, Admin],
-      migrations: [path.join(__dirname, "../migrations/*.{ts,js}")], // Support both .ts and .js files
-      migrationsRun: true, // Automatically run migrations
-      synchronize: false // Disable synchronize in production
+      migrations: [path.join(__dirname, "../migrations/*.{ts,js}")],
+      migrationsRun: true,
+      synchronize: false
     };
   }
 
   // Fallback to individual connection parameters
+  if (!process.env.DB_HOST || !process.env.DB_PORT || !process.env.DB_NAME || 
+      !process.env.DB_USERNAME || !process.env.DB_PASSWORD) {
+    throw new Error('Missing required database environment variables');
+  }
+
   console.log('Using individual database connection parameters');
   return {
     type: "postgres" as const,
-    host: process.env.DB_HOST || "localhost",
-    port: parseInt(process.env.DB_PORT || "5432"),
-    username: process.env.DB_USERNAME || "postgres",
-    password: process.env.DB_PASSWORD || "postgres",
-    database: process.env.DB_NAME || "dailyjobboost",
+    host: process.env.DB_HOST,
+    port: parseInt(process.env.DB_PORT),
+    username: process.env.DB_USERNAME,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
     entities: [User, Quote, EmailLog, Admin],
     migrations: [path.join(__dirname, "../migrations/*.{ts,js}")],
-    migrationsRun: process.env.NODE_ENV === "production", // Auto-run migrations in production
-    synchronize: process.env.NODE_ENV !== "production" // Only synchronize in development
+    migrationsRun: process.env.NODE_ENV === "production",
+    synchronize: false // Disable synchronize in all environments
   };
 };
 
@@ -56,6 +61,6 @@ const dbConfig = getDatabaseConfig();
 
 export const AppDataSource = new DataSource({
   ...dbConfig,
-  logging: true, // Enable logging to see SQL queries
+  logging: process.env.NODE_ENV !== "production", // Only enable logging in development
   subscribers: []
 }); 
