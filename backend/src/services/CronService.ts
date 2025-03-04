@@ -15,7 +15,7 @@ export class CronService {
   constructor() {
     this.userRepository = AppDataSource.getRepository(User);
     this.quoteRepository = AppDataSource.getRepository(Quote);
-    this.emailService = new EmailService();
+    this.emailService = EmailService.getInstance();
     this.quoteRotationService = new QuoteRotationService();
   }
 

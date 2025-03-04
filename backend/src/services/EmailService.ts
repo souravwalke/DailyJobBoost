@@ -8,27 +8,34 @@ import * as crypto from "crypto";
 
 // EmailService.ts - Handles email operations
 export class EmailService {
+  private static instance: EmailService;
   private transporter: nodemailer.Transporter;
 
-  constructor() {
+  private constructor() {
     console.log("Initializing email service with config:", {
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT,
-      secure: process.env.SMTP_SECURE === "true",
-      user: process.env.SMTP_USER,
-      emailFrom: process.env.EMAIL_FROM,
+      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+      port: process.env.EMAIL_PORT || '587',
+      secure: process.env.EMAIL_SECURE === 'true',
+      user: process.env.EMAIL_USER || 'hypemeup.app@gmail.com',
+      emailFrom: process.env.EMAIL_FROM || 'HypeMeUp <noreply@hypemeup.com>'
     });
 
     this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || "587"),
-      secure: process.env.SMTP_SECURE === "true",
+      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.EMAIL_PORT || '587'),
+      secure: process.env.EMAIL_SECURE === 'true',
       auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-      name: "HypeMeUp", // Explicitly set the name
+        user: process.env.EMAIL_USER || 'hypemeup.app@gmail.com',
+        pass: process.env.EMAIL_PASSWORD
+      }
     });
+  }
+
+  public static getInstance(): EmailService {
+    if (!EmailService.instance) {
+      EmailService.instance = new EmailService();
+    }
+    return EmailService.instance;
   }
 
   private generateUnsubscribeToken(userId: number): string {
@@ -41,8 +48,8 @@ export class EmailService {
       console.log("Preparing to send welcome email to:", user.email);
       console.log("Email configuration:", {
         from: process.env.EMAIL_FROM,
-        smtpUser: process.env.SMTP_USER,
-        smtpHost: process.env.SMTP_HOST,
+        smtpUser: process.env.EMAIL_USER,
+        smtpHost: process.env.EMAIL_HOST,
       });
       
       const unsubscribeToken = this.generateUnsubscribeToken(user.id);
@@ -51,7 +58,7 @@ export class EmailService {
       const emailConfig = {
         from: {
           name: "HypeMeUp",
-          address: process.env.SMTP_USER || "noreply@hypemeup.com"
+          address: process.env.EMAIL_USER || "noreply@hypemeup.com"
         },
         to: user.email,
         subject: "Welcome to HypeMeUp! 🎉",
@@ -85,7 +92,7 @@ export class EmailService {
       await this.transporter.sendMail({
         from: {
           name: "HypeMeUp",
-          address: process.env.SMTP_USER || "noreply@hypemeup.com"
+          address: process.env.EMAIL_USER || "noreply@hypemeup.com"
         },
         to: user.email,
         subject: "Your Daily Motivation 🌟",
