@@ -20,6 +20,8 @@ export class CronService {
   }
 
   startDailyEmailJobs() {
+    console.log("Starting to schedule daily email jobs...");
+    
     // Schedule for each timezone
     const timezones = [
       { id: "pst", offset: -8 },
@@ -36,12 +38,20 @@ export class CronService {
     timezones.forEach(tz => {
       // Calculate when 9 AM occurs in each timezone
       const hour = (9 - tz.offset + 24) % 24;
-      cron.schedule(`0 ${hour} * * *`, () => {
+      const cronExpression = `0 ${hour} * * *`;
+      console.log(`Scheduling job for timezone ${tz.id} (UTC+${tz.offset}) at ${hour}:00 UTC (${cronExpression})`);
+      
+      const job = cron.schedule(cronExpression, () => {
+        console.log(`Cron job triggered for timezone ${tz.id} at ${new Date().toISOString()}`);
         this.sendEmailsForTimezone(tz.id);
       });
+
+      if (!job.running) {
+        console.error(`Failed to start cron job for timezone ${tz.id}`);
+      }
     });
 
-    console.log("Daily email jobs scheduled successfully");
+    console.log("Daily email jobs scheduling completed");
   }
 
   async testSendEmails() {
@@ -87,6 +97,8 @@ export class CronService {
 
   private async sendEmailsForTimezone(timezone: string) {
     try {
+      console.log(`Starting to send emails for timezone ${timezone}`);
+      
       // Get all active users in this timezone
       const users = await this.userRepository.find({
         where: {
@@ -95,17 +107,33 @@ export class CronService {
         }
       });
 
-      if (users.length === 0) return;
+      if (users.length === 0) {
+        console.log(`No active users found in timezone ${timezone}`);
+        return;
+      }
+
+      console.log(`Found ${users.length} active users in timezone ${timezone}`);
 
       // Get next quote using rotation service
       const quote = await this.quoteRotationService.getNextQuoteForTimezone(users);
 
+      console.log(`Selected quote for timezone ${timezone}: "${quote.content}" by ${quote.author || 'Anonymous'}`);
+
       // Send emails to all users in parallel
-      await Promise.all(
+      const results = await Promise.allSettled(
         users.map(user => this.emailService.sendDailyQuote(user, quote))
       );
 
-      console.log(`Sent daily quotes to ${users.length} users in ${timezone} timezone`);
+      // Log results
+      const successful = results.filter(r => r.status === 'fulfilled').length;
+      const failed = results.filter(r => r.status === 'rejected').length;
+
+      console.log(`Email sending complete for timezone ${timezone}:
+        - Total attempts: ${users.length}
+        - Successful: ${successful}
+        - Failed: ${failed}
+      `);
+
     } catch (error) {
       console.error(`Failed to send emails for timezone ${timezone}:`, error);
     }

@@ -98,29 +98,40 @@ const connectWithRetry = async (retries = 10, interval = 3000) => {
   return false;
 };
 
-// Start server and initialize database
-const startServer = async () => {
+async function startServer() {
   try {
-    // Start the server first so health checks don't timeout
-    const server = app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
-
-    // Attempt to connect to the database
+    console.log("Starting server initialization...");
+    
+    // Initialize database connection
+    console.log("Attempting to connect to database...");
     const connected = await connectWithRetry();
     
     if (connected) {
-      // Start the cron jobs only if database connection is successful
+      console.log("Database connection successful");
+      
+      // Initialize cron service
+      console.log("Initializing cron service...");
       const cronService = new CronService();
       cronService.startDailyEmailJobs();
-      console.log('Server initialization completed successfully');
+      console.log("Cron service initialized and jobs started");
     } else {
-      console.error("Failed to establish database connection after all retries");
-      // Don't exit the process, let the health check handle it
+      console.error("Failed to connect to database after multiple attempts");
+      // Don't exit process, let health check handle it
     }
-  } catch (error) {
-    console.error("Server startup error:", error);
-  }
-};
 
+    // Start server
+    const port = process.env.PORT || 3000;
+    app.listen(port, () => {
+      console.log(`Server is running on port ${port}`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`Database URL: ${process.env.DATABASE_URL ? 'Configured' : 'Not configured'}`);
+      console.log(`Email service: ${process.env.EMAIL_SERVICE ? 'Configured' : 'Not configured'}`);
+    });
+  } catch (error) {
+    console.error("Failed to start server:", error);
+    process.exit(1);
+  }
+}
+
+// Start the server
 startServer(); 
