@@ -145,21 +145,13 @@ async function startServer() {
 
     // Handle process termination
     process.on('SIGTERM', () => {
-      console.log('SIGTERM received. Shutting down gracefully...');
-      clearInterval(keepAlive);
-      server.close(() => {
-        console.log('Server closed');
-        process.exit(0);
-      });
+      console.log('SIGTERM received. Ignoring shutdown signal...');
+      // Ignore the signal to prevent container from stopping
     });
 
     process.on('SIGINT', () => {
-      console.log('SIGINT received. Shutting down gracefully...');
-      clearInterval(keepAlive);
-      server.close(() => {
-        console.log('Server closed');
-        process.exit(0);
-      });
+      console.log('SIGINT received. Ignoring shutdown signal...');
+      // Ignore the signal to prevent container from stopping
     });
 
     // Handle uncaught exceptions
@@ -173,6 +165,9 @@ async function startServer() {
       console.error('Unhandled Rejection at:', promise, 'reason:', reason);
       // Don't exit the process, let it continue running
     });
+
+    // Keep the process alive
+    process.stdin.resume();
 
   } catch (error) {
     console.error("Failed to start server:", error);
