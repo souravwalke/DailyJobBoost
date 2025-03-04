@@ -1,4 +1,4 @@
-# DailyJobBoost Backend
+# HypeMeUp Backend
 
 A Node.js backend service that sends daily motivational quotes to subscribers via email. Built with Express, TypeScript, PostgreSQL, and TypeORM.
 
@@ -60,7 +60,7 @@ A Node.js backend service that sends daily motivational quotes to subscribers vi
    DB_PORT=5432
    DB_USERNAME=postgres
    DB_PASSWORD=your_password
-   DB_NAME=dailyjobboost
+   DB_NAME=hypemeup
 
    # Email
    SMTP_HOST=smtp.gmail.com
@@ -68,12 +68,12 @@ A Node.js backend service that sends daily motivational quotes to subscribers vi
    SMTP_SECURE=false
    SMTP_USER=your-email@gmail.com
    SMTP_PASS=your-app-specific-password
-   EMAIL_FROM=DailyJobBoost <noreply@dailyjobboost.com>
+   EMAIL_FROM=HypeMeUp <noreply@hypemeup.com>
    ```
 
 4. Create database:
    ```bash
-   createdb dailyjobboost
+   createdb hypemeup
    ```
 
 ## Development
