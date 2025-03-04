@@ -35,8 +35,8 @@ export class CronService {
       const utcTime = toZonedTime(localTime, tz); // Convert to UTC
 
       // Extract UTC hour and minute for cron
-      const cronMinutes = utcTime.getUTCMinutes();
-      const cronHours = utcTime.getUTCHours();
+      const cronMinutes = format(utcTime, "m", { timeZone: "UTC" });
+      const cronHours = format(utcTime, "H", { timeZone: "UTC" });
       const cronExpression = `${cronMinutes} ${cronHours} * * *`;
 
       console.log(`Scheduling job for ${tz}:`);
