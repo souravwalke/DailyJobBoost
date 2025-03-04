@@ -136,7 +136,7 @@ export class EmailTemplateService {
                 <tr>
                   <td style="padding: 30px 40px; color: #94a3b8; font-size: 14px; text-align: center;">
                     <p style="margin: 0 0 10px 0;">
-                      You're receiving this because you subscribed to DailyJobBoost.
+                      You're receiving this because you subscribed to HypeMeUp.
                     </p>
                     <p style="margin: 0;">
                       <a href="${unsubscribeUrl}" style="color: #3b82f6; text-decoration: none;">

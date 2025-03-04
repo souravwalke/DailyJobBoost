@@ -16,6 +16,7 @@ export class EmailService {
       port: process.env.SMTP_PORT,
       secure: process.env.SMTP_SECURE === "true",
       user: process.env.SMTP_USER,
+      emailFrom: process.env.EMAIL_FROM,
     });
 
     this.transporter = nodemailer.createTransport({
@@ -37,21 +38,25 @@ export class EmailService {
   async sendWelcomeEmail(user: User): Promise<void> {
     try {
       console.log("Preparing to send welcome email to:", user.email);
+      console.log("Email configuration:", {
+        from: process.env.EMAIL_FROM,
+        smtpUser: process.env.SMTP_USER,
+        smtpHost: process.env.SMTP_HOST,
+      });
       
       const unsubscribeToken = this.generateUnsubscribeToken(user.id);
       const emailContent = EmailTemplateService.getWelcomeTemplate(unsubscribeToken);
       
-      console.log("Sending welcome email with config:", {
-        from: process.env.EMAIL_FROM || "welcome@dailyjobboost.com",
+      const emailConfig = {
+        from: process.env.EMAIL_FROM || "welcome@hypemeup.com",
         to: user.email,
-      });
-
-      await this.transporter.sendMail({
-        from: process.env.EMAIL_FROM || "welcome@dailyjobboost.com",
-        to: user.email,
-        subject: "Welcome to DailyJobBoost! 🎉",
+        subject: "Welcome to HypeMeUp! 🎉",
         html: emailContent,
-      });
+      };
+
+      console.log("Sending email with config:", emailConfig);
+
+      await this.transporter.sendMail(emailConfig);
 
       console.log("Welcome email sent successfully");
 
@@ -74,7 +79,7 @@ export class EmailService {
       const emailContent = EmailTemplateService.getDailyQuoteTemplate(quote, unsubscribeToken);
       
       await this.transporter.sendMail({
-        from: process.env.EMAIL_FROM || "motivation@dailyjobboost.com",
+        from: process.env.EMAIL_FROM || "motivation@hypemeup.com",
         to: user.email,
         subject: "Your Daily Motivation 🌟",
         html: emailContent,
