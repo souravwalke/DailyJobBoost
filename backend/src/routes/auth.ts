@@ -22,27 +22,44 @@ const registerSchema = z.object({
 // Login endpoint
 router.post("/login", async (req, res) => {
   try {
+    console.log("Login attempt for email:", req.body.email);
     const { email, password } = loginSchema.parse(req.body);
 
     const admin = await adminRepository.findOne({ where: { email } });
+    console.log("Admin found:", admin ? "yes" : "no");
 
-    if (!admin || !(await admin.validatePassword(password))) {
+    if (!admin) {
+      console.log("No admin found with email:", email);
       return res.status(401).json({
         message: "Invalid email or password",
       });
     }
 
+    const isValidPassword = await admin.validatePassword(password);
+    console.log("Password validation result:", isValidPassword);
+
+    if (!isValidPassword) {
+      console.log("Invalid password for admin:", email);
+      return res.status(401).json({
+        message: "Invalid email or password",
+      });
+    }
+
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET environment variable is not set');
+    }
+
     const token = jwt.sign(
-      { id: admin.id },
-      process.env.JWT_SECRET || "your-secret-key",
-      {
-        expiresIn: "7d",
-      }
+      { id: admin.id, email: admin.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
     );
 
+    console.log("Login successful for admin:", email);
     res.json({ token });
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.log("Validation error:", error.errors);
       res.status(400).json({
         message: "Validation error",
         errors: error.errors,
@@ -84,12 +101,14 @@ router.post("/register", async (req, res) => {
 
     await adminRepository.save(admin);
 
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET environment variable is not set');
+    }
+
     const token = jwt.sign(
-      { id: admin.id },
-      process.env.JWT_SECRET || "your-secret-key",
-      {
-        expiresIn: "7d",
-      }
+      { id: admin.id, email: admin.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
     );
 
     res.status(201).json({ token });

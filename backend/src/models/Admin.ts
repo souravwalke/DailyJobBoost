@@ -16,7 +16,10 @@ export class Admin {
   createdAt: Date;
 
   async validatePassword(password: string): Promise<boolean> {
-    return bcrypt.compare(password, this.password);
+    console.log("Validating password...");
+    const result = await bcrypt.compare(password, this.password);
+    console.log("Password validation result:", result);
+    return result;
   }
 
   async setPassword(password: string): Promise<void> {
