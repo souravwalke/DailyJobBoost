@@ -29,26 +29,19 @@ export class CronService {
     ];
 
     timezones.forEach((tz) => {
-      // Get next occurrence of 9:00 AM in this timezone
-      const now = new Date();
-      const zonedTime = toZonedTime(now, tz); // Convert current time to the given timezone
-      const targetTime = new Date(zonedTime);
-      targetTime.setHours(9, 0, 0, 0); // Set to 9:00 AM in local timezone
+      // Convert 9:00 AM in the given timezone to UTC
+      const localTime = new Date();
+      localTime.setHours(9, 0, 0, 0); // Set to 9:00 AM in local timezone
+      const utcTime = toZonedTime(localTime, tz); // Convert to UTC
 
-      // If 9 AM has already passed today, schedule for tomorrow
-      if (targetTime < zonedTime) {
-        targetTime.setDate(targetTime.getDate() + 1);
-      }
-
-      // Convert target time to UTC
-      const targetTimeUTC = targetTime.toISOString();
-      const cronMinutes = format(targetTime, "m", { timeZone: "UTC" });
-      const cronHours = format(targetTime, "H", { timeZone: "UTC" });
+      // Extract UTC hour and minute for cron
+      const cronMinutes = utcTime.getUTCMinutes();
+      const cronHours = utcTime.getUTCHours();
       const cronExpression = `${cronMinutes} ${cronHours} * * *`;
 
       console.log(`Scheduling job for ${tz}:`);
-      console.log(`  - Local 9:00 AM time: ${targetTime.toLocaleString("en-US", { timeZone: tz })}`);
-      console.log(`  - UTC time: ${targetTimeUTC}`);
+      console.log(`  - Local 9:00 AM time: ${localTime.toLocaleString("en-US", { timeZone: tz })}`);
+      console.log(`  - UTC equivalent time: ${utcTime.toISOString()}`);
       console.log(`  - Cron expression: ${cronExpression}`);
 
       const job = cron.schedule(cronExpression, () => {
@@ -85,4 +78,4 @@ export class CronService {
       console.error(`Error sending emails for ${timezone}:`, error);
     }
   }
-} 
+}
