@@ -8,7 +8,7 @@ export class CreateQuotesTable1709500000000 implements MigrationInterface {
                 content TEXT NOT NULL,
                 author VARCHAR(255),
                 category VARCHAR(255),
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
         `);
     }
