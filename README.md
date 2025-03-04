@@ -119,38 +119,26 @@ npm run dev
 
 ## Environment Variables
 
-### Backend
+### Backend (.env)
 
 - `PORT`: Server port (default: 3001)
-- `FRONTEND_URL`: Frontend URL for CORS
 - `NODE_ENV`: Environment (development/production)
-
-#### Database Configuration
-
-- `DB_HOST`: Database host
-- `DB_PORT`: Database port
-- `DB_USERNAME`: Database username
-- `DB_PASSWORD`: Database password
-- `DB_NAME`: Database name
-
-#### Email Configuration
-
+- `FRONTEND_URL`: Frontend application URL
+- `DATABASE_URL`: PostgreSQL database connection URL
+- `JWT_SECRET`: Secret key for JWT token generation
+- `UNSUBSCRIBE_SECRET`: Secret key for unsubscribe links
 - `SMTP_HOST`: SMTP server host
 - `SMTP_PORT`: SMTP server port
-- `SMTP_SECURE`: Use SSL/TLS (true/false)
-- `SMTP_USER`: SMTP username
-- `SMTP_PASS`: SMTP password
+- `SMTP_USER`: SMTP server username
+- `SMTP_PASS`: SMTP server password
+- `SMTP_SECURE`: SMTP secure connection (true/false)
 - `EMAIL_FROM`: Sender email address
+- `ADMIN_EMAIL`: Admin user email
+- `ADMIN_PASSWORD`: Admin user password
 
-#### Security
+## Frontend (.env.local)
 
-- `JWT_SECRET`: Secret for JWT tokens
-- `UNSUBSCRIBE_SECRET`: Secret for generating unsubscribe tokens
-- `ADMIN_PASSWORD`: Initial admin password
-
-### Frontend
-
-- `NEXT_PUBLIC_API_URL`: Backend API URL
+- `NEXT_PUBLIC_API_URL`: Backend API URL (e.g., https://hypemeup-production.up.railway.app)
 
 ## API Endpoints
 
