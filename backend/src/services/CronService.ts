@@ -43,28 +43,30 @@ export class CronService {
     // TEST: Schedule a one-time job for 1 PM PST today
     const now = new Date();
     
-    // Convert current time to PST
+    // Get current time in PST
     const currentTimePST = new Date(now.toLocaleString('en-US', { 
-      timeZone: 'America/Los_Angeles' 
+      timeZone: 'America/Los_Angeles',
+      timeZoneName: 'short'
     }));
     
-    // Set test time to 1 PM PST
-    const testTime = new Date(now.toLocaleString('en-US', { 
-      timeZone: 'America/Los_Angeles' 
-    }));
-    testTime.setHours(13, 0, 0, 0); // 1 PM PST
+    // Create target time (1 PM PST) by setting hours directly
+    const testTime = new Date(now);
+    testTime.setHours(13, 0, 0, 0); // 1 PM
     
     console.log('[TEST] Current time:', currentTimePST.toLocaleString('en-US', { 
-      timeZone: 'America/Los_Angeles' 
+      timeZone: 'America/Los_Angeles',
+      timeZoneName: 'short'
     }));
     console.log('[TEST] Target test time:', testTime.toLocaleString('en-US', { 
-      timeZone: 'America/Los_Angeles' 
+      timeZone: 'America/Los_Angeles',
+      timeZoneName: 'short'
     }));
     
     if (testTime > currentTimePST) {
       // Convert to UTC for cron scheduling
       const targetTimeUTC = new Date(testTime.toLocaleString('en-US', { 
-        timeZone: 'UTC' 
+        timeZone: 'UTC',
+        timeZoneName: 'short'
       }));
       const minutes = targetTimeUTC.getMinutes();
       const hours = targetTimeUTC.getHours();
@@ -72,15 +74,17 @@ export class CronService {
       
       console.log(`[TEST] Creating one-time job with cron expression: ${testCronExpression}`);
       console.log(`[TEST] Job will run at: ${testTime.toLocaleString('en-US', { 
-        timeZone: 'America/Los_Angeles' 
-      })} PST (${targetTimeUTC.toISOString()} UTC)`);
+        timeZone: 'America/Los_Angeles',
+        timeZoneName: 'short'
+      })} (${targetTimeUTC.toISOString()} UTC)`);
       
       const testJob = cron.schedule(testCronExpression, () => {
         console.log('----------------------------------------');
         console.log(`[TEST] One-time job triggered at ${new Date().toISOString()} UTC`);
         console.log(`[TEST] Local time: ${new Date().toLocaleString('en-US', { 
-          timeZone: 'America/Los_Angeles' 
-        })} PST`);
+          timeZone: 'America/Los_Angeles',
+          timeZoneName: 'short'
+        })}`);
         this.sendEmailsForTimezone('America/Los_Angeles');
         testJob.stop(); // Stop the job after it runs once
         console.log('[TEST] Job stopped after successful execution');
