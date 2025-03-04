@@ -125,7 +125,6 @@ async function startServer() {
       console.log(`Server is running on port ${port}`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`Database URL: ${process.env.DATABASE_URL ? 'Configured' : 'Not configured'}`);
-      console.log(`Email service: ${process.env.EMAIL_SERVICE ? 'Configured' : 'Not configured'}`);
     });
 
     // Handle server errors
