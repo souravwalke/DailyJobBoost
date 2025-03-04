@@ -52,7 +52,7 @@ export class CronService {
     // TEST: Schedule a job to run in 2 minutes
     const testJob = cron.schedule('*/2 * * * *', () => {
       console.log(`[CRON] Test job triggered at ${new Date().toISOString()}`);
-      this.sendEmailsForTimezone('pst');
+      this.sendEmailsForTimezone('America/Los_Angeles');
     });
     testJob.start();
     console.log('[CRON] Test job scheduled to run every 2 minutes');
