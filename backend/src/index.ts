@@ -105,6 +105,9 @@ const connectWithRetry = async (retries = 10, interval = 3000) => {
   return false;
 };
 
+// Function to wait for a specified time
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 async function startServer() {
   try {
     console.log("Starting server initialization...");
@@ -121,58 +124,62 @@ async function startServer() {
       const cronService = new CronService();
       cronService.startDailyEmailJobs();
       console.log("Cron service initialized and jobs started");
+
+      // Wait for 5 seconds to ensure everything is initialized
+      console.log("Waiting for services to stabilize...");
+      await wait(5000);
+
+      // Start server
+      const port = process.env.PORT || 3000;
+      const server = app.listen(port, () => {
+        console.log(`Server is running on port ${port}`);
+        console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+        console.log(`Database URL: ${process.env.DATABASE_URL ? 'Configured' : 'Not configured'}`);
+        console.log(`SMTP Configuration: ${process.env.SMTP_HOST ? 'Configured' : 'Not configured'}`);
+      });
+
+      // Handle server errors
+      server.on('error', (error: NodeJS.ErrnoException) => {
+        if (error.code === 'EADDRINUSE') {
+          console.error(`Port ${port} is already in use`);
+        } else {
+          console.error('Server error:', error);
+        }
+      });
+
+      // Handle process termination
+      process.on('SIGTERM', () => {
+        console.log('SIGTERM received. Shutting down gracefully...');
+        server.close(() => {
+          console.log('Server closed');
+          process.exit(0);
+        });
+      });
+
+      process.on('SIGINT', () => {
+        console.log('SIGINT received. Shutting down gracefully...');
+        server.close(() => {
+          console.log('Server closed');
+          process.exit(0);
+        });
+      });
+
+      // Handle uncaught exceptions
+      process.on('uncaughtException', (error) => {
+        console.error('Uncaught Exception:', error);
+        // Don't exit the process, let it continue running
+      });
+
+      // Handle unhandled promise rejections
+      process.on('unhandledRejection', (reason, promise) => {
+        console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+        // Don't exit the process, let it continue running
+      });
+
     } else {
       console.error("Failed to connect to database after multiple attempts");
       // Don't exit process, let health check handle it
     }
-
-    // Start server
-    const port = process.env.PORT || 3000;
-    const server = app.listen(port, () => {
-      console.log(`Server is running on port ${port}`);
-      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`Database URL: ${process.env.DATABASE_URL ? 'Configured' : 'Not configured'}`);
-      console.log(`SMTP Configuration: ${process.env.SMTP_HOST ? 'Configured' : 'Not configured'}`);
-    });
-
-    // Handle server errors
-    server.on('error', (error: NodeJS.ErrnoException) => {
-      if (error.code === 'EADDRINUSE') {
-        console.error(`Port ${port} is already in use`);
-      } else {
-        console.error('Server error:', error);
-      }
-    });
-
-    // Handle process termination
-    process.on('SIGTERM', () => {
-      console.log('SIGTERM received. Shutting down gracefully...');
-      server.close(() => {
-        console.log('Server closed');
-        process.exit(0);
-      });
-    });
-
-    process.on('SIGINT', () => {
-      console.log('SIGINT received. Shutting down gracefully...');
-      server.close(() => {
-        console.log('Server closed');
-        process.exit(0);
-      });
-    });
-
-    // Handle uncaught exceptions
-    process.on('uncaughtException', (error) => {
-      console.error('Uncaught Exception:', error);
-      // Don't exit the process, let it continue running
-    });
-
-    // Handle unhandled promise rejections
-    process.on('unhandledRejection', (reason, promise) => {
-      console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-      // Don't exit the process, let it continue running
-    });
-
   } catch (error) {
     console.error("Failed to start server:", error);
     // Don't exit the process, let it continue running
