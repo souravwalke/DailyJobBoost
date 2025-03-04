@@ -1,14 +1,14 @@
-import { Router } from "express";
+import express from "express";
 import { AppDataSource } from "../config/database";
 import { User } from "../models/User";
-import { EmailService } from "../services/EmailService";
 import { CronService } from "../services/CronService";
+import { EmailService } from "../services/EmailService";
 import { z } from "zod";
 
-const router = Router();
+const router = express.Router();
 const userRepository = AppDataSource.getRepository(User);
-const emailService = new EmailService();
 const cronService = new CronService();
+const emailService = EmailService.getInstance();
 
 // Validation schema
 const subscribeSchema = z.object({
