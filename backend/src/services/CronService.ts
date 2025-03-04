@@ -1,26 +1,29 @@
-import cron from "node-cron";
+import { Client } from "@upstash/qstash";
 import { AppDataSource } from "../config/database";
 import { User } from "../models/User";
 import { Quote } from "../models/Quote";
 import { EmailService } from "./EmailService";
 import { QuoteRotationService } from "./QuoteRotationService";
 import { Repository } from "typeorm";
-import { format } from 'date-fns-tz';
 
 export class CronService {
   private userRepository: Repository<User>;
   private quoteRepository: Repository<Quote>;
   private emailService: EmailService;
   private quoteRotationService: QuoteRotationService;
+  private qstash: Client;
 
   constructor() {
     this.userRepository = AppDataSource.getRepository(User);
     this.quoteRepository = AppDataSource.getRepository(Quote);
     this.emailService = new EmailService();
     this.quoteRotationService = new QuoteRotationService();
+    this.qstash = new Client({
+      token: process.env.QSTASH_TOKEN || "",
+    });
   }
 
-  startDailyEmailJobs() {
+  async startDailyEmailJobs() {
     console.log("Starting to schedule daily email jobs...");
     
     const timezones = [
@@ -28,41 +31,28 @@ export class CronService {
       "GMT", "Europe/Paris", "Asia/Kolkata", "Asia/Tokyo", "Australia/Sydney"
     ];
 
-    timezones.forEach((tz) => {
-      // Create a date for 9:00 AM in the target timezone
-      const now = new Date();
-      const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0);
-      
-      // Get the timezone offset in minutes
-      const tzOffset = new Date().toLocaleString('en-US', { timeZone: tz, timeZoneName: 'short' }).split(' ')[1];
-      const offsetMinutes = parseInt(tzOffset.replace(/[^-\d]/g, '')) * 60;
-      
-      // Adjust the target date by the timezone offset
-      const utcDate = new Date(targetDate.getTime() - offsetMinutes * 60000);
-      
-      // Extract UTC hour and minute for cron
-      const cronMinutes = utcDate.getUTCMinutes();
-      const cronHours = utcDate.getUTCHours();
-      const cronExpression = `${cronMinutes} ${cronHours} * * *`;
+    for (const tz of timezones) {
+      try {
+        // Schedule job for 9:00 AM in each timezone
+        await this.qstash.schedules.create({
+          cron: "0 9 * * *",
+          destination: `${process.env.API_URL}/api/cron/send-emails`,
+          body: JSON.stringify({ timezone: tz }),
+          headers: {
+            "Content-Type": "application/json"
+          }
+        });
 
-      console.log(`Scheduling job for ${tz}:`);
-      console.log(`  - Local 9:00 AM time: ${targetDate.toLocaleString("en-US", { timeZone: tz })}`);
-      console.log(`  - UTC time: ${utcDate.toISOString()}`);
-      console.log(`  - Cron expression: ${cronExpression}`);
-
-      const job = cron.schedule(cronExpression, () => {
-        console.log(`[CRON] Triggered job for ${tz} at ${new Date().toISOString()} UTC`);
-        console.log(`[CRON] Local time in ${tz}: ${new Date().toLocaleString("en-US", { timeZone: tz })}`);
-        this.sendEmailsForTimezone(tz);
-      });
-
-      job.start();
-    });
+        console.log(`Scheduled job for ${tz} at 9:00 AM local time`);
+      } catch (error) {
+        console.error(`Error scheduling job for ${tz}:`, error);
+      }
+    }
 
     console.log("All daily email jobs scheduled successfully.");
   }
 
-  private async sendEmailsForTimezone(timezone: string) {
+  async sendEmailsForTimezone(timezone: string) {
     try {
       console.log(`Sending emails for ${timezone}...`);
       const users = await this.userRepository.find({ where: { timezone, isActive: true } });

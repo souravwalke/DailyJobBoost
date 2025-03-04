@@ -6,6 +6,7 @@ import { userRouter } from "./routes/users";
 import quoteRouter from "./routes/quotes";
 import authRouter from "./routes/auth";
 import dotenv from "dotenv";
+import cronRouter from "./routes/cron";
 
 dotenv.config();
 
@@ -63,6 +64,7 @@ app.get("/api/health", async (_, res) => {
 app.use("/api/auth", authRouter);
 app.use("/api/users", userRouter);
 app.use("/api/quotes", quoteRouter);
+app.use("/api/cron", cronRouter);
 
 // Function to attempt database connection with retries
 const connectWithRetry = async (retries = 10, interval = 3000) => {

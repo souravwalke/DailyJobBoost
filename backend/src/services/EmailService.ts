@@ -12,21 +12,22 @@ export class EmailService {
 
   constructor() {
     console.log("Initializing email service with config:", {
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: process.env.SMTP_PORT || '587',
-      secure: process.env.SMTP_SECURE === 'true',
-      user: process.env.SMTP_USER || 'hypemeup.app@gmail.com',
-      emailFrom: process.env.EMAIL_FROM || 'HypeMeUp <noreply@hypemeup.com>'
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      secure: process.env.SMTP_SECURE === "true",
+      user: process.env.SMTP_USER,
+      emailFrom: process.env.EMAIL_FROM,
     });
 
     this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_SECURE === 'true',
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT || "587"),
+      secure: process.env.SMTP_SECURE === "true",
       auth: {
-        user: process.env.SMTP_USER || 'hypemeup.app@gmail.com',
-        pass: process.env.SMTP_PASS
-      }
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+      name: "HypeMeUp", // Explicitly set the name
     });
   }
 
