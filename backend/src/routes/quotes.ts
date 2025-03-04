@@ -98,15 +98,21 @@ router.post("/", auth, async (req, res) => {
         message: "Validation error",
         errors: error.errors,
       });
-    } else {
+    } else if (error instanceof Error) {
       console.error("Error creating quote:", {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        name: error instanceof Error ? error.name : 'Unknown error type'
+        error: error.message,
+        stack: error.stack,
+        name: error.name
       });
       res.status(500).json({
         message: "Failed to create quote",
         error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    } else {
+      console.error("Unknown error creating quote:", error);
+      res.status(500).json({
+        message: "Failed to create quote",
+        error: process.env.NODE_ENV === 'development' ? 'Unknown error occurred' : undefined
       });
     }
   }
