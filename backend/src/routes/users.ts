@@ -56,4 +56,4 @@ router.post("/subscribe", async (req, res) => {
   }
 });
 
-export default router; 
+export const userRouter = router; 
