@@ -27,7 +27,7 @@ const getDatabaseConfig = () => {
       url: process.env.DATABASE_URL,
       type: "postgres" as const,
       ssl: {
-        rejectUnauthorized: true // Enable SSL verification
+        rejectUnauthorized: false // Required for Railway's SSL connection
       },
       entities: [User, Quote, EmailLog, Admin],
       migrations: [path.join(__dirname, "../migrations/*.{ts,js}")],
