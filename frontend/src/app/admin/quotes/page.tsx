@@ -70,7 +70,7 @@ export default function QuotesAdmin() {
 
   const fetchQuotes = async () => {
     try {
-      const response = await fetch("http://localhost:3001/api/quotes", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/quotes`, {
         headers: getAuthHeaders(),
       });
       if (!response.ok) throw handleAuthError(response);
@@ -86,7 +86,7 @@ export default function QuotesAdmin() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:3001/api/quotes", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/quotes`, {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify(formData),
@@ -109,7 +109,7 @@ export default function QuotesAdmin() {
     if (!confirm("Are you sure you want to delete this quote?")) return;
 
     try {
-      const response = await fetch(`http://localhost:3001/api/quotes/${id}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/quotes/${id}`, {
         method: "DELETE",
         headers: getAuthHeaders(),
       });
