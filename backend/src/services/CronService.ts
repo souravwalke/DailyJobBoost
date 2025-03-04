@@ -5,6 +5,7 @@ import { Quote } from "../models/Quote";
 import { EmailService } from "./EmailService";
 import { QuoteRotationService } from "./QuoteRotationService";
 import { Repository } from "typeorm";
+import { format, toZonedTime } from 'date-fns-tz';
 
 export class CronService {
   private userRepository: Repository<User>;
@@ -42,52 +43,32 @@ export class CronService {
 
     // TEST: Schedule a one-time job for 1 PM PST today
     const now = new Date();
+    const pstZone = 'America/Los_Angeles';
     
     // Get current time in PST
-    const currentTimePST = new Date(now.toLocaleString('en-US', { 
-      timeZone: 'America/Los_Angeles',
-      timeZoneName: 'short'
-    }));
+    const currentTimePST = toZonedTime(now, pstZone);
     
-    // Create target time (1 PM PST) in PST timezone
-    const testTime = new Date(now.toLocaleString('en-US', { 
-      timeZone: 'America/Los_Angeles',
-      timeZoneName: 'short'
-    }));
+    // Create target time (1 PM PST)
+    const testTime = toZonedTime(now, pstZone);
     testTime.setHours(13, 0, 0, 0); // 1 PM PST
     
-    console.log('[TEST] Current time:', currentTimePST.toLocaleString('en-US', { 
-      timeZone: 'America/Los_Angeles',
-      timeZoneName: 'short'
-    }));
-    console.log('[TEST] Target test time:', testTime.toLocaleString('en-US', { 
-      timeZone: 'America/Los_Angeles',
-      timeZoneName: 'short'
-    }));
+    console.log('[TEST] Current time:', format(currentTimePST, 'M/d/yyyy, h:mm:ss a z', { timeZone: pstZone }));
+    console.log('[TEST] Target test time:', format(testTime, 'M/d/yyyy, h:mm:ss a z', { timeZone: pstZone }));
     
     if (testTime > currentTimePST) {
       // Convert to UTC for cron scheduling
-      const targetTimeUTC = new Date(testTime.toLocaleString('en-US', { 
-        timeZone: 'UTC',
-        timeZoneName: 'short'
-      }));
-      const minutes = targetTimeUTC.getMinutes();
-      const hours = targetTimeUTC.getHours();
+      const targetTimeUTC = new Date(testTime.getTime());
+      const minutes = targetTimeUTC.getUTCMinutes();
+      const hours = targetTimeUTC.getUTCHours();
       const testCronExpression = `${minutes} ${hours} * * *`;
       
       console.log(`[TEST] Creating one-time job with cron expression: ${testCronExpression}`);
-      console.log(`[TEST] Job will run at: ${testTime.toLocaleString('en-US', { 
-        timeZone: 'America/Los_Angeles',
-        timeZoneName: 'short'
-      })} (${targetTimeUTC.toISOString()} UTC)`);
+      console.log(`[TEST] Job will run at: ${format(testTime, 'M/d/yyyy, h:mm:ss a z', { timeZone: pstZone })} (${targetTimeUTC.toISOString()} UTC)`);
       
       const testJob = cron.schedule(testCronExpression, () => {
         console.log('----------------------------------------');
         console.log(`[TEST] One-time job triggered at ${new Date().toISOString()} UTC`);
-        console.log(`[TEST] Local time: ${new Date().toLocaleString('en-US', { 
-          timeZone: 'America/Los_Angeles',
-          timeZoneName: 'short'
-        })}`);
+        console.log(`[TEST] Local time: ${format(new Date(), 'M/d/yyyy, h:mm:ss a z', { timeZone: pstZone })}`);
         this.sendEmailsForTimezone('America/Los_Angeles');
         testJob.stop(); // Stop the job after it runs once
         console.log('[TEST] Job stopped after successful execution');
