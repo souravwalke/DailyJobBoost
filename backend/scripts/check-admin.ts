@@ -3,10 +3,16 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const DATABASE_URL = 'postgresql://postgres:xzjKMTNpOQGBuVgcgKslLkPSJalnPFSk@interchange.proxy.rlwy.net:52065/railway';
+if (!process.env.DATABASE_URL) {
+  console.error('DATABASE_URL environment variable is not set');
+  process.exit(1);
+}
 
 const pool = new Pool({
-  connectionString: DATABASE_URL,
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 async function checkAdmin() {
