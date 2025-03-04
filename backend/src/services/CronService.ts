@@ -49,8 +49,16 @@ export class CronService {
       console.log(`- ${tz.id} (UTC+${tz.offset}): Next run at ${nextRun.toISOString()} (${nextRun.toLocaleString()})`);
     });
 
+    // TEST: Schedule a job to run in 2 minutes
+    const testJob = cron.schedule('*/2 * * * *', () => {
+      console.log(`[CRON] Test job triggered at ${new Date().toISOString()}`);
+      this.sendEmailsForTimezone('pst');
+    });
+    testJob.start();
+    console.log('[CRON] Test job scheduled to run every 2 minutes');
+
+    // Original timezone-based jobs
     timezones.forEach(tz => {
-      // Calculate when 9 AM occurs in each timezone
       const hour = Math.round((9 - tz.offset + 24) % 24);
       const cronExpression = `0 ${hour} * * *`;
       console.log(`Scheduling job for timezone ${tz.id} (UTC+${tz.offset}) at ${hour}:00 UTC (${cronExpression})`);
@@ -61,7 +69,6 @@ export class CronService {
         this.sendEmailsForTimezone(tz.id);
       });
 
-      // Start the job and log success
       job.start();
       console.log(`[CRON] Successfully scheduled job for timezone ${tz.id}`);
     });
