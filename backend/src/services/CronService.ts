@@ -49,9 +49,12 @@ export class CronService {
       timeZoneName: 'short'
     }));
     
-    // Create target time (1 PM PST) by setting hours directly
-    const testTime = new Date(now);
-    testTime.setHours(13, 0, 0, 0); // 1 PM
+    // Create target time (1 PM PST) in PST timezone
+    const testTime = new Date(now.toLocaleString('en-US', { 
+      timeZone: 'America/Los_Angeles',
+      timeZoneName: 'short'
+    }));
+    testTime.setHours(13, 0, 0, 0); // 1 PM PST
     
     console.log('[TEST] Current time:', currentTimePST.toLocaleString('en-US', { 
       timeZone: 'America/Los_Angeles',
