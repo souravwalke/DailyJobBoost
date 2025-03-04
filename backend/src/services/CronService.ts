@@ -5,7 +5,7 @@ import { Quote } from "../models/Quote";
 import { EmailService } from "./EmailService";
 import { QuoteRotationService } from "./QuoteRotationService";
 import { Repository } from "typeorm";
-import { format, toZonedTime } from 'date-fns-tz';
+import { format } from 'date-fns-tz';
 
 export class CronService {
   private userRepository: Repository<User>;
@@ -29,19 +29,25 @@ export class CronService {
     ];
 
     timezones.forEach((tz) => {
-      // Convert 9:00 AM in the given timezone to UTC
-      const localTime = new Date();
-      localTime.setHours(9, 0, 0, 0); // Set to 9:00 AM in local timezone
-      const utcTime = toZonedTime(localTime, tz); // Convert to UTC
-
+      // Create a date for 9:00 AM in the target timezone
+      const now = new Date();
+      const targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0);
+      
+      // Get the timezone offset in minutes
+      const tzOffset = new Date().toLocaleString('en-US', { timeZone: tz, timeZoneName: 'short' }).split(' ')[1];
+      const offsetMinutes = parseInt(tzOffset.replace(/[^-\d]/g, '')) * 60;
+      
+      // Adjust the target date by the timezone offset
+      const utcDate = new Date(targetDate.getTime() - offsetMinutes * 60000);
+      
       // Extract UTC hour and minute for cron
-      const cronMinutes = format(utcTime, "m", { timeZone: "UTC" });
-      const cronHours = format(utcTime, "H", { timeZone: "UTC" });
+      const cronMinutes = utcDate.getUTCMinutes();
+      const cronHours = utcDate.getUTCHours();
       const cronExpression = `${cronMinutes} ${cronHours} * * *`;
 
       console.log(`Scheduling job for ${tz}:`);
-      console.log(`  - Local 9:00 AM time: ${localTime.toLocaleString("en-US", { timeZone: tz })}`);
-      console.log(`  - UTC equivalent time: ${utcTime.toISOString()}`);
+      console.log(`  - Local 9:00 AM time: ${targetDate.toLocaleString("en-US", { timeZone: tz })}`);
+      console.log(`  - UTC time: ${utcDate.toISOString()}`);
       console.log(`  - Cron expression: ${cronExpression}`);
 
       const job = cron.schedule(cronExpression, () => {
