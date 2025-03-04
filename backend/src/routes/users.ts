@@ -4,11 +4,13 @@ import { User } from "../models/User";
 import { CronService } from "../services/CronService";
 import { EmailService } from "../services/EmailService";
 import { z } from "zod";
+import { QuoteRotationService } from "../services/QuoteRotationService";
 
 const router = express.Router();
 const userRepository = AppDataSource.getRepository(User);
 const cronService = new CronService();
 const emailService = new EmailService();
+const quoteRotationService = new QuoteRotationService();
 
 // Validation schema
 const subscribeSchema = z.object({
@@ -136,6 +138,60 @@ router.post("/test-daily-emails", async (req, res) => {
     console.error("Failed to trigger test emails:", error);
     res.status(500).json({
       message: "Failed to trigger test emails. Check server logs for details.",
+    });
+  }
+});
+
+// Test endpoint to manually trigger daily email
+router.post("/test-daily-email", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        status: "error",
+        code: 400,
+        message: "Email is required",
+      });
+    }
+
+    // Find the user
+    const user = await userRepository.findOne({
+      where: { email },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        status: "error",
+        code: 404,
+        message: "User not found",
+      });
+    }
+
+    // Get next quote using rotation service
+    const quote = await quoteRotationService.getNextQuoteForTimezone([user]);
+
+    // Send the email
+    await emailService.sendDailyQuote(user, quote);
+
+    return res.json({
+      status: "success",
+      message: "Test email sent successfully",
+      data: {
+        email: user.email,
+        timezone: user.timezone,
+        quote: {
+          content: quote.content,
+          author: quote.author,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error in test email endpoint:", error);
+    return res.status(500).json({
+      status: "error",
+      code: 500,
+      message: "Failed to send test email",
     });
   }
 });
