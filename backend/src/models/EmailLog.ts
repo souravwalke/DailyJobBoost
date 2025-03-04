@@ -15,7 +15,7 @@ export class EmailLog {
   quote: Quote;
 
   @CreateDateColumn()
-  sentAt: Date;
+  createdAt: Date;
 
   @Column()
   status: string;

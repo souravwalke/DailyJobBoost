@@ -23,7 +23,7 @@ export class QuoteRotationService {
         .createQueryBuilder("emailLog")
         .select("emailLog.quoteId")
         .where("emailLog.userId = :userId", { userId: user.id })
-        .orderBy("emailLog.sentAt", "DESC")
+        .orderBy("emailLog.createdAt", "DESC")
         .limit(totalQuotes - 1) // Leave at least one quote that hasn't been sent
         .getMany();
 
@@ -67,7 +67,7 @@ export class QuoteRotationService {
         .createQueryBuilder("emailLog")
         .select("emailLog.quoteId")
         .where("emailLog.userId IN (:...userIds)", { userIds: users.map(u => u.id) })
-        .orderBy("emailLog.sentAt", "DESC")
+        .orderBy("emailLog.createdAt", "DESC")
         .limit(totalQuotes - 1)
         .getMany();
 
