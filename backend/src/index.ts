@@ -24,16 +24,17 @@ console.log('Starting server with configuration:', {
   FRONTEND_URL: process.env.FRONTEND_URL
 });
 
-// CORS configuration
-const corsOptions = {
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true
-};
+if (!process.env.FRONTEND_URL) {
+  throw new Error('FRONTEND_URL environment variable is not set');
+}
 
-// Middleware
-app.use(cors(corsOptions));
+// CORS configuration
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 // Add health check endpoint before database connection
