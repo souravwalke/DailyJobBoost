@@ -125,6 +125,7 @@ async function startServer() {
       console.log(`Server is running on port ${port}`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`Database URL: ${process.env.DATABASE_URL ? 'Configured' : 'Not configured'}`);
+      console.log(`SMTP Configuration: ${process.env.SMTP_HOST ? 'Configured' : 'Not configured'}`);
     });
 
     // Handle server errors
@@ -153,11 +154,26 @@ async function startServer() {
       });
     });
 
+    // Handle uncaught exceptions
+    process.on('uncaughtException', (error) => {
+      console.error('Uncaught Exception:', error);
+      // Don't exit the process, let it continue running
+    });
+
+    // Handle unhandled promise rejections
+    process.on('unhandledRejection', (reason, promise) => {
+      console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+      // Don't exit the process, let it continue running
+    });
+
   } catch (error) {
     console.error("Failed to start server:", error);
-    process.exit(1);
+    // Don't exit the process, let it continue running
   }
 }
 
 // Start the server
-startServer(); 
+startServer().catch(error => {
+  console.error("Fatal error during server startup:", error);
+  // Don't exit the process, let it continue running
+}); 
