@@ -12,7 +12,8 @@
     "create-admin": "ts-node src/scripts/create-admin.ts",
     "create-admin-sql": "ts-node scripts/create-admin-sql.ts",
     "create-admin-typeorm": "ts-node scripts/create-admin-typeorm.ts",
-    "check-admin": "ts-node src/scripts/check-admin.ts"
+    "check-admin": "ts-node src/scripts/check-admin.ts",
+    "check-schema": "ts-node scripts/check-schema.ts"
   },
   "keywords": [],
   "author": "",

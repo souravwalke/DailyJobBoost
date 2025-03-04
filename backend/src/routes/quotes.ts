@@ -80,20 +80,33 @@ router.get("/:id", auth, async (req, res) => {
 // Create a new quote
 router.post("/", auth, async (req, res) => {
   try {
+    console.log('Creating new quote with data:', req.body);
     const quoteData = quoteSchema.parse(req.body);
+    console.log('Validated quote data:', quoteData);
+    
     const quote = quoteRepository.create(quoteData);
+    console.log('Created quote entity:', quote);
+    
     await quoteRepository.save(quote);
+    console.log('Successfully saved quote to database');
+    
     res.status(201).json(quote);
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error('Validation error:', error.errors);
       res.status(400).json({
         message: "Validation error",
         errors: error.errors,
       });
     } else {
-      console.error("Error creating quote:", error);
+      console.error("Error creating quote:", {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : 'Unknown error type'
+      });
       res.status(500).json({
         message: "Failed to create quote",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }
   }
