@@ -23,9 +23,13 @@ export class CronService {
     console.log("Starting to schedule daily email jobs...");
     console.log(`Current server time: ${new Date().toISOString()}`);
     
-    // Schedule for each timezone
+    // Schedule for each timezone using IANA timezone names
     const timezones = [
-      { id: "America/Los_Angeles", offset: -8, display: "Pacific Time" },
+      { 
+        id: "America/Los_Angeles",
+        offset: -8,
+        display: "Pacific Time"
+      },
       { id: "America/Denver", offset: -7, display: "Mountain Time" },
       { id: "America/Chicago", offset: -6, display: "Central Time" },
       { id: "America/New_York", offset: -5, display: "Eastern Time" },
@@ -36,12 +40,33 @@ export class CronService {
       { id: "Australia/Sydney", offset: 10, display: "Australian Eastern Time" }
     ];
 
+    // TEST: Schedule a one-time job for 1 PM PST today
+    const testTime = new Date();
+    testTime.setHours(13, 0, 0, 0); // 1 PM
+    const now = new Date();
+    
+    if (testTime > now) {
+      const minutes = testTime.getMinutes();
+      const hours = testTime.getHours();
+      const testCronExpression = `${minutes} ${hours} * * *`;
+      console.log(`[TEST] Scheduling one-time job for 1:00 PM PST (${testTime.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })})`);
+      
+      const testJob = cron.schedule(testCronExpression, () => {
+        console.log(`[TEST] One-time job triggered at ${new Date().toISOString()}`);
+        console.log(`[TEST] Local time: ${new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })}`);
+        this.sendEmailsForTimezone('America/Los_Angeles');
+        testJob.stop(); // Stop the job after it runs once
+      });
+
+      testJob.start();
+      console.log('[TEST] One-time job scheduled successfully');
+    }
+
     // Log all scheduled jobs
     console.log("Scheduled jobs for the next 24 hours:");
-    const now = new Date();
     timezones.forEach(tz => {
       const hour = Math.round((9 - tz.offset + 24) % 24);
-      const nextRun = new Date(now);
+      const nextRun = new Date();
       nextRun.setHours(hour, 0, 0, 0);
       if (nextRun < now) {
         nextRun.setDate(nextRun.getDate() + 1);
