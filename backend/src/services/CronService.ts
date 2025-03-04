@@ -45,21 +45,31 @@ export class CronService {
     testTime.setHours(13, 0, 0, 0); // 1 PM
     const now = new Date();
     
+    console.log('[TEST] Current time:', now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+    console.log('[TEST] Target test time:', testTime.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+    
     if (testTime > now) {
       const minutes = testTime.getMinutes();
       const hours = testTime.getHours();
       const testCronExpression = `${minutes} ${hours} * * *`;
-      console.log(`[TEST] Scheduling one-time job for 1:00 PM PST (${testTime.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })})`);
+      console.log(`[TEST] Creating one-time job with cron expression: ${testCronExpression}`);
+      console.log(`[TEST] Job will run at: ${testTime.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })}`);
       
       const testJob = cron.schedule(testCronExpression, () => {
+        console.log('----------------------------------------');
         console.log(`[TEST] One-time job triggered at ${new Date().toISOString()}`);
         console.log(`[TEST] Local time: ${new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })}`);
         this.sendEmailsForTimezone('America/Los_Angeles');
         testJob.stop(); // Stop the job after it runs once
+        console.log('[TEST] Job stopped after successful execution');
+        console.log('----------------------------------------');
       });
 
       testJob.start();
       console.log('[TEST] One-time job scheduled successfully');
+      console.log('[TEST] Waiting for execution at 1:00 PM PST...');
+    } else {
+      console.log('[TEST] Test time (1 PM PST) has already passed for today');
     }
 
     // Log all scheduled jobs
