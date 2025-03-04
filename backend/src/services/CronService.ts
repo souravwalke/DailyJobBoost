@@ -95,29 +95,48 @@ export class CronService {
     // Log all scheduled jobs
     console.log("Scheduled jobs for the next 24 hours:");
     timezones.forEach(tz => {
-      const hour = Math.round((9 - tz.offset + 24) % 24);
+      // Calculate when 9 AM occurs in UTC for this timezone
+      const targetUTCHour = (9 + tz.offset + 24) % 24;
+      
+      // Create next run time in the timezone
       const nextRun = new Date();
-      nextRun.setHours(hour, 0, 0, 0);
+      nextRun.setUTCHours(targetUTCHour, 0, 0, 0);
+      
+      // If the time has already passed today, schedule for tomorrow
       if (nextRun < now) {
         nextRun.setDate(nextRun.getDate() + 1);
       }
-      console.log(`- ${tz.display} (${tz.id}, UTC${tz.offset >= 0 ? '+' : ''}${tz.offset}): Next run at ${nextRun.toISOString()} (${nextRun.toLocaleString()})`);
+
+      // Log the next run time in both UTC and local timezone
+      console.log(`- ${tz.display} (${tz.id}, UTC${tz.offset >= 0 ? '+' : ''}${tz.offset}): 
+        Next run at ${nextRun.toISOString()} UTC
+        Local time: ${nextRun.toLocaleString('en-US', { timeZone: tz.id })}
+      `);
     });
 
-    // Original timezone-based jobs
+    // Schedule daily jobs for each timezone
     timezones.forEach(tz => {
-      const hour = Math.round((9 - tz.offset + 24) % 24);
-      const cronExpression = `0 ${hour} * * *`;
-      console.log(`Scheduling job for timezone ${tz.display} (${tz.id}) at ${hour}:00 UTC (${cronExpression})`);
+      // To run at 9 AM in the local timezone, we need to calculate what time that is in UTC
+      const targetUTCHour = (9 + tz.offset + 24) % 24;
+      const cronExpression = `0 ${targetUTCHour} * * *`;
+      
+      console.log(`Scheduling job for ${tz.display} (${tz.id}):
+        - Local time: 9:00 AM ${tz.display}
+        - UTC time: ${targetUTCHour}:00
+        - Cron expression: ${cronExpression}
+      `);
       
       const job = cron.schedule(cronExpression, () => {
-        console.log(`[CRON] Job triggered for timezone ${tz.display} (${tz.id}) at ${new Date().toISOString()}`);
-        console.log(`[CRON] Current server time: ${new Date().toISOString()}`);
+        console.log('----------------------------------------');
+        console.log(`[CRON] Job triggered for timezone ${tz.display} (${tz.id})`);
+        console.log(`[CRON] Current UTC time: ${new Date().toISOString()}`);
+        console.log(`[CRON] Current ${tz.display} time: ${new Date().toLocaleString('en-US', { timeZone: tz.id })}`);
         this.sendEmailsForTimezone(tz.id);
+        console.log('----------------------------------------');
       });
 
       job.start();
-      console.log(`[CRON] Successfully scheduled job for timezone ${tz.display} (${tz.id})`);
+      console.log(`[CRON] Successfully scheduled job for ${tz.display}`);
     });
 
     console.log("Daily email jobs scheduling completed");
