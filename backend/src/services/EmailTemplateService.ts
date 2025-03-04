@@ -61,7 +61,7 @@ export class EmailTemplateService {
                 <tr>
                   <td style="padding: 30px 40px; color: #94a3b8; font-size: 14px; text-align: center;">
                     <p style="margin: 0 0 10px 0;">
-                      You're receiving this because you subscribed to DailyJobBoost.
+                      You're receiving this because you subscribed to HypeMeUp.
                     </p>
                     <p style="margin: 0;">
                       <a href="${unsubscribeUrl}" style="color: #3b82f6; text-decoration: none;">
@@ -91,7 +91,7 @@ export class EmailTemplateService {
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Welcome to DailyJobBoost</title>
+        <title>Welcome to HypeMeUp</title>
       </head>
       <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f9fafb;">
         <table role="presentation" style="width: 100%; border: none; margin: 0; padding: 0;">
@@ -103,7 +103,7 @@ export class EmailTemplateService {
                 <tr>
                   <td style="padding: 30px 40px; background-color: #3b82f6;">
                     <h1 style="margin: 0; font-size: 24px; color: #ffffff; text-align: center;">
-                      🎉 Welcome to DailyJobBoost!
+                      🎉 Welcome to HypeMeUp!
                     </h1>
                   </td>
                 </tr>
@@ -112,7 +112,7 @@ export class EmailTemplateService {
                 <tr>
                   <td style="padding: 40px;">
                     <p style="color: #1e293b; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                      Thank you for subscribing to DailyJobBoost! We're excited to be part of your journey.
+                      Thank you for subscribing to HypeMeUp! We're excited to be part of your journey.
                     </p>
                     
                     <p style="color: #1e293b; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
