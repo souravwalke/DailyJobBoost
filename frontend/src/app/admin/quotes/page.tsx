@@ -86,19 +86,35 @@ export default function QuotesAdmin() {
     setIsLoading(true);
 
     try {
+      console.log('Creating quote with data:', formData);
+      const headers = getAuthHeaders();
+      console.log('Request headers:', headers);
+      
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/quotes`, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: headers,
         body: JSON.stringify(formData),
       });
 
-      if (!response.ok) throw handleAuthError(response);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Failed to create quote:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        });
+        throw handleAuthError(response);
+      }
 
+      const data = await response.json();
+      console.log('Quote created successfully:', data);
+      
       toast.success("Quote created successfully");
       setFormData({ content: "", author: "", category: "" });
       setIsDialogOpen(false);
       fetchQuotes();
     } catch (error) {
+      console.error('Error creating quote:', error);
       toast.error("Failed to create quote");
     } finally {
       setIsLoading(false);
