@@ -44,20 +44,27 @@ app.get("/api/health", async (_, res) => {
     if (AppDataSource.isInitialized) {
       // Verify connection with a simple query
       await AppDataSource.query('SELECT 1');
-      res.status(200).json({ status: "healthy" });
+      res.status(200).json({ 
+        status: "healthy",
+        database: "connected",
+        timestamp: new Date().toISOString()
+      });
     } else {
       res.status(503).json({ 
-        status: "unhealthy", 
-        message: "Database not connected",
-        initialized: false
+        status: "starting",
+        database: "initializing",
+        message: "Database connection in progress",
+        timestamp: new Date().toISOString()
       });
     }
   } catch (error: any) {
     console.error('Health check failed:', error);
     res.status(503).json({ 
       status: "unhealthy", 
+      database: "error",
       message: "Database connection error",
-      error: error.message || 'Unknown error'
+      error: error.message || 'Unknown error',
+      timestamp: new Date().toISOString()
     });
   }
 });

@@ -7,5 +7,5 @@ startCommand = "npm start"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"
-healthcheckInterval = 30
-healthcheckGracePeriod = 60 
+healthcheckInterval = 60
+healthcheckGracePeriod = 180 
