@@ -25,15 +25,15 @@ export class CronService {
     
     // Schedule for each timezone
     const timezones = [
-      { id: "pst", offset: -8 },
-      { id: "mst", offset: -7 },
-      { id: "cst", offset: -6 },
-      { id: "est", offset: -5 },
-      { id: "gmt", offset: 0 },
-      { id: "cet", offset: 1 },
-      { id: "ist", offset: 5.5 },
-      { id: "jst", offset: 9 },
-      { id: "aest", offset: 10 }
+      { id: "America/Los_Angeles", offset: -8, display: "Pacific Time" },
+      { id: "America/Denver", offset: -7, display: "Mountain Time" },
+      { id: "America/Chicago", offset: -6, display: "Central Time" },
+      { id: "America/New_York", offset: -5, display: "Eastern Time" },
+      { id: "GMT", offset: 0, display: "Greenwich Mean Time" },
+      { id: "Europe/Paris", offset: 1, display: "Central European Time" },
+      { id: "Asia/Kolkata", offset: 5.5, display: "India Standard Time" },
+      { id: "Asia/Tokyo", offset: 9, display: "Japan Standard Time" },
+      { id: "Australia/Sydney", offset: 10, display: "Australian Eastern Time" }
     ];
 
     // Log all scheduled jobs
@@ -46,23 +46,23 @@ export class CronService {
       if (nextRun < now) {
         nextRun.setDate(nextRun.getDate() + 1);
       }
-      console.log(`- ${tz.id} (UTC+${tz.offset}): Next run at ${nextRun.toISOString()} (${nextRun.toLocaleString()})`);
+      console.log(`- ${tz.display} (${tz.id}, UTC${tz.offset >= 0 ? '+' : ''}${tz.offset}): Next run at ${nextRun.toISOString()} (${nextRun.toLocaleString()})`);
     });
 
     // Original timezone-based jobs
     timezones.forEach(tz => {
       const hour = Math.round((9 - tz.offset + 24) % 24);
       const cronExpression = `0 ${hour} * * *`;
-      console.log(`Scheduling job for timezone ${tz.id} (UTC+${tz.offset}) at ${hour}:00 UTC (${cronExpression})`);
+      console.log(`Scheduling job for timezone ${tz.display} (${tz.id}) at ${hour}:00 UTC (${cronExpression})`);
       
       const job = cron.schedule(cronExpression, () => {
-        console.log(`[CRON] Job triggered for timezone ${tz.id} at ${new Date().toISOString()}`);
+        console.log(`[CRON] Job triggered for timezone ${tz.display} (${tz.id}) at ${new Date().toISOString()}`);
         console.log(`[CRON] Current server time: ${new Date().toISOString()}`);
         this.sendEmailsForTimezone(tz.id);
       });
 
       job.start();
-      console.log(`[CRON] Successfully scheduled job for timezone ${tz.id}`);
+      console.log(`[CRON] Successfully scheduled job for timezone ${tz.display} (${tz.id})`);
     });
 
     console.log("Daily email jobs scheduling completed");
