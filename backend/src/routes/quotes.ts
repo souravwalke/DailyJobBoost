@@ -80,6 +80,12 @@ router.get("/:id", auth, async (req, res) => {
 // Create a new quote
 router.post("/", auth, async (req, res) => {
   try {
+    // Check database connection
+    if (!AppDataSource.isInitialized) {
+      console.log('Initializing database connection...');
+      await AppDataSource.initialize();
+    }
+
     console.log('Creating new quote with data:', req.body);
     const quoteData = quoteSchema.parse(req.body);
     console.log('Validated quote data:', quoteData);
@@ -102,7 +108,8 @@ router.post("/", auth, async (req, res) => {
       console.error("Error creating quote:", {
         error: error.message,
         stack: error.stack,
-        name: error.name
+        name: error.name,
+        databaseInitialized: AppDataSource.isInitialized
       });
       res.status(500).json({
         message: "Failed to create quote",
@@ -121,12 +128,22 @@ router.post("/", auth, async (req, res) => {
 // Update a quote
 router.put("/:id", auth, async (req, res) => {
   try {
+    // Check database connection
+    if (!AppDataSource.isInitialized) {
+      console.log('Initializing database connection...');
+      await AppDataSource.initialize();
+    }
+
+    console.log('Updating quote with data:', req.body);
     const quoteData = quoteSchema.parse(req.body);
+    console.log('Validated quote data:', quoteData);
+
     const quote = await quoteRepository.findOne({
       where: { id: parseInt(req.params.id) },
     });
 
     if (!quote) {
+      console.log('Quote not found with ID:', req.params.id);
       return res.status(404).json({
         message: "Quote not found",
       });
@@ -134,17 +151,31 @@ router.put("/:id", auth, async (req, res) => {
 
     quoteRepository.merge(quote, quoteData);
     await quoteRepository.save(quote);
+    console.log('Successfully updated quote in database');
     res.json(quote);
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error('Validation error:', error.errors);
       res.status(400).json({
         message: "Validation error",
         errors: error.errors,
       });
-    } else {
-      console.error("Error updating quote:", error);
+    } else if (error instanceof Error) {
+      console.error("Error updating quote:", {
+        error: error.message,
+        stack: error.stack,
+        name: error.name,
+        databaseInitialized: AppDataSource.isInitialized
+      });
       res.status(500).json({
         message: "Failed to update quote",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    } else {
+      console.error("Unknown error updating quote:", error);
+      res.status(500).json({
+        message: "Failed to update quote",
+        error: process.env.NODE_ENV === 'development' ? 'Unknown error occurred' : undefined
       });
     }
   }
