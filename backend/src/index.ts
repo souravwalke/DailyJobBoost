@@ -102,7 +102,25 @@ async function startServer() {
   try {
     console.log("Starting server initialization...");
     
-    // Start server immediately
+    // Initialize database connection first
+    console.log("Attempting to connect to database...");
+    const connected = await connectWithRetry();
+    
+    if (!connected) {
+      console.error("Failed to connect to database after multiple attempts");
+      // Don't exit process, let health check handle it
+      return;
+    }
+
+    console.log("Database connection successful");
+    
+    // Initialize cron service
+    console.log("Initializing cron service...");
+    const cronService = new CronService();
+    cronService.startDailyEmailJobs();
+    console.log("Cron service initialized and jobs started");
+
+    // Start server after database and cron are initialized
     const port = process.env.PORT || 3000;
     const server = app.listen(port, () => {
       console.log(`Server is running on port ${port}`);
@@ -154,26 +172,6 @@ async function startServer() {
     process.on('unhandledRejection', (reason, promise) => {
       console.error('Unhandled Rejection at:', promise, 'reason:', reason);
       // Don't exit the process, let it continue running
-    });
-
-    // Initialize database connection in the background
-    console.log("Attempting to connect to database...");
-    connectWithRetry().then(connected => {
-      if (connected) {
-        console.log("Database connection successful");
-        
-        // Initialize cron service
-        console.log("Initializing cron service...");
-        const cronService = new CronService();
-        cronService.startDailyEmailJobs();
-        console.log("Cron service initialized and jobs started");
-      } else {
-        console.error("Failed to connect to database after multiple attempts");
-        // Don't exit process, let health check handle it
-      }
-    }).catch(error => {
-      console.error("Error during database connection:", error);
-      // Don't exit process, let health check handle it
     });
 
   } catch (error) {

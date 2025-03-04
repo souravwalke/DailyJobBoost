@@ -9,4 +9,5 @@ healthcheckTimeout = 300
 restartPolicyType = "on_failure"
 healthcheckInterval = 60
 healthcheckGracePeriod = 300
-healthcheckRetries = 5 
+healthcheckRetries = 5
+startTimeout = 300 
