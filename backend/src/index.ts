@@ -111,6 +111,11 @@ async function startServer() {
       console.log(`SMTP Configuration: ${process.env.SMTP_HOST ? 'Configured' : 'Not configured'}`);
     });
 
+    // Keep-alive mechanism
+    const keepAlive = setInterval(() => {
+      console.log('Keep-alive ping:', new Date().toISOString());
+    }, 30000); // Log every 30 seconds
+
     // Handle server errors
     server.on('error', (error: NodeJS.ErrnoException) => {
       if (error.code === 'EADDRINUSE') {
@@ -123,6 +128,7 @@ async function startServer() {
     // Handle process termination
     process.on('SIGTERM', () => {
       console.log('SIGTERM received. Shutting down gracefully...');
+      clearInterval(keepAlive);
       server.close(() => {
         console.log('Server closed');
         process.exit(0);
@@ -131,6 +137,7 @@ async function startServer() {
 
     process.on('SIGINT', () => {
       console.log('SIGINT received. Shutting down gracefully...');
+      clearInterval(keepAlive);
       server.close(() => {
         console.log('Server closed');
         process.exit(0);
