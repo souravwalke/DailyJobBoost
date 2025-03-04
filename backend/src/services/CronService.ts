@@ -35,6 +35,19 @@ export class CronService {
       { id: "aest", offset: 10 }
     ];
 
+    // Log all scheduled jobs
+    console.log("Scheduled jobs for the next 24 hours:");
+    const now = new Date();
+    timezones.forEach(tz => {
+      const hour = Math.round((9 - tz.offset + 24) % 24);
+      const nextRun = new Date(now);
+      nextRun.setHours(hour, 0, 0, 0);
+      if (nextRun < now) {
+        nextRun.setDate(nextRun.getDate() + 1);
+      }
+      console.log(`- ${tz.id} (UTC+${tz.offset}): Next run at ${nextRun.toISOString()}`);
+    });
+
     timezones.forEach(tz => {
       // Calculate when 9 AM occurs in each timezone
       const hour = Math.round((9 - tz.offset + 24) % 24);
@@ -46,7 +59,11 @@ export class CronService {
         this.sendEmailsForTimezone(tz.id);
       });
 
-      console.log(`Successfully scheduled job for timezone ${tz.id}`);
+      if (!job.running) {
+        console.error(`Failed to start cron job for timezone ${tz.id}`);
+      } else {
+        console.log(`Successfully scheduled job for timezone ${tz.id}`);
+      }
     });
 
     console.log("Daily email jobs scheduling completed");
