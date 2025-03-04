@@ -98,6 +98,64 @@ const connectWithRetry = async (retries = 10, interval = 3000) => {
 // Function to wait for a specified time
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Process manager to ensure server stays running
+class ProcessManager {
+  private static instance: ProcessManager;
+  private isShuttingDown: boolean = false;
+  private server: any;
+  private keepAlive: NodeJS.Timeout;
+
+  private constructor() {
+    // Keep-alive mechanism
+    this.keepAlive = setInterval(() => {
+      if (!this.isShuttingDown) {
+        console.log('Keep-alive ping:', new Date().toISOString());
+      }
+    }, 30000);
+
+    // Handle process termination
+    process.on('SIGTERM', () => {
+      console.log('SIGTERM received. Preventing shutdown...');
+      this.isShuttingDown = false;
+    });
+
+    process.on('SIGINT', () => {
+      console.log('SIGINT received. Preventing shutdown...');
+      this.isShuttingDown = false;
+    });
+
+    // Handle uncaught exceptions
+    process.on('uncaughtException', (error) => {
+      console.error('Uncaught Exception:', error);
+      this.isShuttingDown = false;
+    });
+
+    // Handle unhandled promise rejections
+    process.on('unhandledRejection', (reason, promise) => {
+      console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+      this.isShuttingDown = false;
+    });
+
+    // Keep the process alive
+    process.stdin.resume();
+  }
+
+  public static getInstance(): ProcessManager {
+    if (!ProcessManager.instance) {
+      ProcessManager.instance = new ProcessManager();
+    }
+    return ProcessManager.instance;
+  }
+
+  public setServer(server: any) {
+    this.server = server;
+  }
+
+  public preventShutdown() {
+    this.isShuttingDown = false;
+  }
+}
+
 async function startServer() {
   try {
     console.log("Starting server initialization...");
@@ -108,7 +166,6 @@ async function startServer() {
     
     if (!connected) {
       console.error("Failed to connect to database after multiple attempts");
-      // Don't exit process, let health check handle it
       return;
     }
 
@@ -129,10 +186,9 @@ async function startServer() {
       console.log(`SMTP Configuration: ${process.env.SMTP_HOST ? 'Configured' : 'Not configured'}`);
     });
 
-    // Keep-alive mechanism
-    const keepAlive = setInterval(() => {
-      console.log('Keep-alive ping:', new Date().toISOString());
-    }, 30000); // Log every 30 seconds
+    // Initialize process manager
+    const processManager = ProcessManager.getInstance();
+    processManager.setServer(server);
 
     // Handle server errors
     server.on('error', (error: NodeJS.ErrnoException) => {
@@ -141,42 +197,15 @@ async function startServer() {
       } else {
         console.error('Server error:', error);
       }
+      processManager.preventShutdown();
     });
-
-    // Handle process termination
-    process.on('SIGTERM', () => {
-      console.log('SIGTERM received. Ignoring shutdown signal...');
-      // Ignore the signal to prevent container from stopping
-    });
-
-    process.on('SIGINT', () => {
-      console.log('SIGINT received. Ignoring shutdown signal...');
-      // Ignore the signal to prevent container from stopping
-    });
-
-    // Handle uncaught exceptions
-    process.on('uncaughtException', (error) => {
-      console.error('Uncaught Exception:', error);
-      // Don't exit the process, let it continue running
-    });
-
-    // Handle unhandled promise rejections
-    process.on('unhandledRejection', (reason, promise) => {
-      console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-      // Don't exit the process, let it continue running
-    });
-
-    // Keep the process alive
-    process.stdin.resume();
 
   } catch (error) {
     console.error("Failed to start server:", error);
-    // Don't exit the process, let it continue running
   }
 }
 
 // Start the server
 startServer().catch(error => {
   console.error("Fatal error during server startup:", error);
-  // Don't exit the process, let it continue running
 }); 
