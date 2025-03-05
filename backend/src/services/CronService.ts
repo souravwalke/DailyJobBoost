@@ -24,11 +24,11 @@ export class CronService {
   }
 
   async startDailyEmailJobs() {
-    console.log("Starting to schedule daily email jobs...");
+    console.log("🚀 Starting to schedule daily email jobs...");
     
     try {
       // Schedule a single job that runs every hour to check all timezones
-      await this.qstash.schedules.create({
+      const schedule = await this.qstash.schedules.create({
         cron: "0 * * * *", // Run every hour
         destination: `${process.env.API_URL}/api/cron/send-emails`,
         body: JSON.stringify({ checkAllTimezones: true }),
@@ -37,9 +37,13 @@ export class CronService {
         }
       });
 
-      console.log("Scheduled hourly check for all timezones");
+      console.log("✅ Scheduled hourly check with QStash:", {
+        scheduleId: schedule.scheduleId,
+        destination: `${process.env.API_URL}/api/cron/send-emails`,
+        cron: "0 * * * *"
+      });
     } catch (error) {
-      console.error("Error scheduling main job:", error);
+      console.error("❌ Error scheduling main job:", error);
     }
   }
 
@@ -50,30 +54,37 @@ export class CronService {
       const tzTime = new Date(now.toLocaleString("en-US", { timeZone: timezone }));
       const hour = tzTime.getHours();
 
+      console.log(`🕒 Checking ${timezone}:`, {
+        currentTime: tzTime.toLocaleString(),
+        hour,
+        targetHour: 9
+      });
+
       // Only send emails if it's 9 AM in this timezone
       if (hour !== 9) {
-        console.log(`Skipping ${timezone} - current hour is ${hour}`);
+        console.log(`⏭️ Skipping ${timezone} - current hour is ${hour}`);
         return;
       }
 
-      console.log(`Sending emails for ${timezone}...`);
+      console.log(`📬 Sending emails for ${timezone}...`);
       const users = await this.userRepository.find({ where: { timezone, isActive: true } });
 
       if (!users.length) {
-        console.log(`No active users in ${timezone}`);
+        console.log(`ℹ️ No active users in ${timezone}`);
         return;
       }
 
+      console.log(`👥 Found ${users.length} active users in ${timezone}`);
       const quote = await this.quoteRotationService.getNextQuoteForTimezone(users);
-      console.log(`Selected quote: "${quote.content}" by ${quote.author || 'Anonymous'}`);
+      console.log(`💭 Selected quote: "${quote.content}" by ${quote.author || 'Anonymous'}`);
 
       const results = await Promise.allSettled(users.map(user => this.emailService.sendDailyQuote(user, quote)));
       const successful = results.filter(r => r.status === "fulfilled").length;
       const failed = results.filter(r => r.status === "rejected").length;
 
-      console.log(`Email results for ${timezone}: Success ${successful}, Failed ${failed}`);
+      console.log(`📊 Email results for ${timezone}: Success ${successful}, Failed ${failed}`);
     } catch (error) {
-      console.error(`Error sending emails for ${timezone}:`, error);
+      console.error(`❌ Error sending emails for ${timezone}:`, error);
     }
   }
 
@@ -83,8 +94,10 @@ export class CronService {
       "GMT", "Europe/Paris", "Asia/Kolkata", "Asia/Tokyo", "Australia/Sydney"
     ];
 
+    console.log(`🌍 Checking all timezones at ${new Date().toISOString()}`);
     for (const tz of timezones) {
       await this.sendEmailsForTimezone(tz);
     }
+    console.log(`✅ Completed timezone checks at ${new Date().toISOString()}`);
   }
 }
