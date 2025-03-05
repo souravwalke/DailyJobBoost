@@ -62,72 +62,33 @@ export class CronService {
   }
 
   async startDailyEmailJobs() {
+    
     console.log("[CronService] 🚀 Setting up QStash schedules for each timezone...");
     
     // First, clean up any existing schedules
     await this.cleanupSchedules();
-    
-    // Create a single schedule that runs every hour
-    try {
-      console.log("[CronService] 📝 Creating new schedule...");
-      console.log("[CronService] 🔗 API URL:", this.apiUrl);
-      
-      const schedule = await this.qstash.schedules.create({
-        cron: "0 * * * *", // Run at minute 0 of every hour
-        destination: `${this.apiUrl}/api/cron/send-emails`,
-        retries: 3,
-        headers: {
-          "Content-Type": "application/json"
+
+    for (const timezone of SUPPORTED_TIMEZONES) {
+        try {
+          console.log(`[CronService] 📝 Creating schedule for ${timezone}...`);
+          const schedule = await this.qstash.schedules.create({
+            cron: "0 9 * * *",
+            destination: `${this.apiUrl}/api/cron/send-emails`,
+            headers: {
+              "Content-Type": "application/json",
+              "x-timezone": timezone // Pass the timezone
+            }
+          });
+          console.log(`[CronService] ✅ Created schedule for ${timezone} (ID: ${schedule.scheduleId})`);
         }
-      });
-
-      if (!schedule?.scheduleId) {
-        throw new Error("Failed to create schedule - no ID returned");
-      }
-
-      console.log(`[CronService] ✅ Schedule created with ID: ${schedule.scheduleId}`);
-      console.log("[CronService] 📋 Initial schedule response:", JSON.stringify(schedule, null, 2));
-
-      // Wait a moment for the schedule to be fully created
-      console.log("[CronService] ⏳ Waiting for schedule to be fully created...");
-      await new Promise(resolve => setTimeout(resolve, 5000));
-
-      // Get the schedule details
-      console.log("[CronService] 🔍 Fetching schedule details...");
-      const createdSchedule = await this.qstash.schedules.get(schedule.scheduleId) as unknown as QStashSchedule;
-      console.log("[CronService] 📋 Schedule details:", JSON.stringify(createdSchedule, null, 2));
-
-      // Check if the schedule is active
-      if (!createdSchedule) {
-        console.warn("[CronService] ⚠️ Schedule not found after creation");
-      } else if (createdSchedule.isPaused) {
-        console.warn("[CronService] ⚠️ Schedule is paused");
-      } else {
-        console.log("[CronService] ✅ Schedule is created and not paused");
-        console.log("[CronService] 📊 Schedule details:", {
-          id: createdSchedule.scheduleId,
-          destination: createdSchedule.destination,
-          cron: createdSchedule.cron,
-          retries: createdSchedule.retries,
-          isPaused: createdSchedule.isPaused,
-          createdAt: new Date(createdSchedule.createdAt || 0).toISOString()
-        });
-      }
-
-      console.log("[CronService] ✅ Schedule setup completed");
-    } catch (error) {
-      console.error(`[CronService] ❌ Failed to schedule email job:`, error);
-      if (error instanceof Error) {
-        console.error("[CronService] Error details:", {
-          name: error.name,
-          message: error.message,
-          stack: error.stack
-        });
-      }
+        catch (error) {
+          console.error(`[CronService] ❌ Failed to create schedule for ${timezone}:`, error);
+        }
     }
 
-    console.log("[CronService] ✅ Schedule creation process completed");
+    console.log("[CronService] ✅ All per-timezone schedules have been created successfully");
   }
+
 
   private async cleanupSchedules() {
     try {
@@ -150,50 +111,50 @@ export class CronService {
   }
 
   async sendEmailsForTimezone(timezone: string) {
-    // Validate timezone with O(1) lookup
-    if (!SUPPORTED_TIMEZONES.has(timezone)) {
-      throw new Error(`Unsupported timezone: ${timezone}`);
-    }
-
-    try {
-      console.log(`[CronService] 📬 Processing emails for ${timezone}...`);
-      const users = await this.userRepository.find({ where: { timezone, isActive: true } });
-
-      if (users.length === 0) {
-        console.log(`[CronService] ℹ️ No active users in ${timezone}`);
-        return;
+      // Validate timezone with O(1) lookup
+      if (!SUPPORTED_TIMEZONES.has(timezone)) {
+        throw new Error(`Unsupported timezone: ${timezone}`);
       }
 
-      console.log(`[CronService] 👥 Found ${users.length} active users in ${timezone}`);
+      try {
+        console.log(`[CronService] 📬 Processing emails for ${timezone}...`);
+        const users = await this.userRepository.find({ where: { timezone, isActive: true } });
 
-      const quote = await this.quoteRotationService.getNextQuoteForTimezone(users);
-      if (!quote) {
-        console.warn(`[CronService] ⚠️ No available quotes for timezone ${timezone}`);
-        return;
-      }
-
-      console.log(`[CronService] 💭 Selected quote: "${quote.content}" by ${quote.author || "Anonymous"}"`);
-
-      const batchSize = 50;
-      for (let i = 0; i < users.length; i += batchSize) {
-        const batch = users.slice(i, i + batchSize);
-        const results = await Promise.allSettled(
-          batch.map(user => this.sendWithRetry(user, quote))
-        );
-
-        const successful = results.filter(r => r.status === "fulfilled").length;
-        const failed = results.filter(r => r.status === "rejected").length;
-
-        console.log(`[CronService] 📊 Email batch results for ${timezone}: Success ${successful}, Failed ${failed}`);
-        
-        if (i + batchSize < users.length) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+        if (users.length === 0) {
+          console.log(`[CronService] ℹ️ No active users in ${timezone}`);
+          return;
         }
+
+        console.log(`[CronService] 👥 Found ${users.length} active users in ${timezone}`);
+
+        const quote = await this.quoteRotationService.getNextQuoteForTimezone(users);
+        if (!quote) {
+          console.warn(`[CronService] ⚠️ No available quotes for timezone ${timezone}`);
+          return;
+        }
+
+        console.log(`[CronService] 💭 Selected quote: "${quote.content}" by ${quote.author || "Anonymous"}"`);
+
+        const batchSize = 50;
+        for (let i = 0; i < users.length; i += batchSize) {
+          const batch = users.slice(i, i + batchSize);
+          const results = await Promise.allSettled(
+            batch.map(user => this.sendWithRetry(user, quote))
+          );
+
+          const successful = results.filter(r => r.status === "fulfilled").length;
+          const failed = results.filter(r => r.status === "rejected").length;
+
+          console.log(`[CronService] 📊 Email batch results for ${timezone}: Success ${successful}, Failed ${failed}`);
+        
+          if (i + batchSize < users.length) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+      } catch (error) {
+        console.error(`[CronService] ❌ Error sending emails for ${timezone}:`, error);
+        throw error;
       }
-    } catch (error) {
-      console.error(`[CronService] ❌ Error sending emails for ${timezone}:`, error);
-      throw error;
-    }
   }
 
   private async sendWithRetry(user: User, quote: Quote, maxRetries = 3): Promise<void> {
