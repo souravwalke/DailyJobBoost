@@ -5,6 +5,7 @@ import { EmailService } from "./EmailService";
 import { QuoteRotationService } from "./QuoteRotationService";
 import { Repository } from "typeorm";
 import { Client } from "@upstash/qstash";
+import { DateTime } from "luxon";
 
 // Add QStash schedule type
 interface QStashSchedule {
@@ -17,7 +18,7 @@ interface QStashSchedule {
 }
 
 // Use a Set for O(1) lookup instead of an array
-const SUPPORTED_TIMEZONES = new Set([
+export const SUPPORTED_TIMEZONES = new Set([
   "America/Los_Angeles",
   "America/Denver",
   "America/Chicago",
@@ -48,41 +49,43 @@ export class CronService {
     this.qstash = new Client({ token: process.env.QSTASH_TOKEN });
   }
 
+  getSupportedTimezones(): string[] {
+    return Array.from(SUPPORTED_TIMEZONES);
+  }
+
   async startDailyEmailJobs() {
     console.log("[CronService] 🚀 Setting up QStash schedules for each timezone...");
     
     // First, clean up any existing schedules
     await this.cleanupSchedules();
     
-    for (const timezone of SUPPORTED_TIMEZONES) {
-      try {
-        const schedule = await this.qstash.schedules.create({
-          cron: `0 9 * * * ${timezone}`,
-          destination: `${process.env.API_URL}/api/cron/send-emails`,
-          retries: 3,
-          headers: {
-            "Content-Type": "application/json",
-            "X-Timezone": timezone
-          }
-        });
-
-        if (!schedule?.scheduleId) {
-          throw new Error("Failed to create schedule - no ID returned");
+    // Create a single schedule that runs every hour
+    try {
+      const schedule = await this.qstash.schedules.create({
+        cron: "0 * * * *", // Run at minute 0 of every hour
+        destination: `${process.env.API_URL}/api/cron/send-emails`,
+        retries: 3,
+        headers: {
+          "Content-Type": "application/json"
         }
+      });
 
-        console.log(`[CronService] ✅ Scheduled email job for ${timezone}`);
-
-        const createdSchedule = await this.qstash.schedules.get(schedule.scheduleId) as unknown as QStashSchedule;
-        if (createdSchedule?.status !== "active") {
-          throw new Error(`Schedule created but not active. Status: ${createdSchedule?.status}`);
-        }
-      } catch (error) {
-        console.error(`[CronService] ❌ Failed to schedule email job for ${timezone}:`, error);
-        throw error;
+      if (!schedule?.scheduleId) {
+        throw new Error("Failed to create schedule - no ID returned");
       }
+
+      console.log(`[CronService] ✅ Scheduled email job`);
+
+      const createdSchedule = await this.qstash.schedules.get(schedule.scheduleId) as unknown as QStashSchedule;
+      if (createdSchedule?.status !== "active") {
+        throw new Error(`Schedule created but not active. Status: ${createdSchedule?.status}`);
+      }
+    } catch (error) {
+      console.error(`[CronService] ❌ Failed to schedule email job:`, error);
+      throw error;
     }
 
-    console.log("[CronService] ✅ All schedules created successfully");
+    console.log("[CronService] ✅ Schedule created successfully");
   }
 
   private async cleanupSchedules() {
@@ -98,7 +101,7 @@ export class CronService {
         }
       }
 
-      console.log(`[CronService] ✅ Cleaned up ${deletedCount} old schedules`);
+      console.log(`[CronService] ✅ Cleaned up ${deletedCount} existing schedules`);
     } catch (error) {
       console.error("[CronService] ❌ Failed to cleanup schedules:", error);
       throw error;

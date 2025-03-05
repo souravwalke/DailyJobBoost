@@ -1,15 +1,11 @@
-import express from "express";
+import { Router } from "express";
 import { CronService } from "../services/CronService";
 import { Receiver } from "@upstash/qstash";
+import { DateTime } from "luxon";
+import express from "express";
 
-const router = express.Router();
+const router = Router();
 const cronService = new CronService();
-
-// Validate signing keys at startup
-if (!process.env.QSTASH_CURRENT_SIGNING_KEY || !process.env.QSTASH_NEXT_SIGNING_KEY) {
-  console.error("[QStash] ❌ Missing signing keys in environment variables!");
-  process.exit(1); // Exit if critical env vars are missing
-}
 
 // Initialize QStash receiver for signature verification
 const receiver = new Receiver({
@@ -40,30 +36,30 @@ router.post("/send-emails", async (req, res) => {
         body: (req as any).rawBody // Use raw body for verification
       });
     } catch (error) {
-      console.error("[QStash] ❌ Signature verification failed. Possible causes:");
-      console.error("  - Mismatched request body?");
-      console.error("  - Incorrect signing key?");
-      console.error("  - Tampered request?");
-      console.error("Error details:", error);
+      console.error("[QStash] ❌ Signature verification failed:", error);
       return res.status(403).json({ error: "Forbidden: Invalid signature" });
     }
 
-    // Extract timezone from headers (case-insensitive)
-    const timezone = req.headers["x-timezone"]?.toString() || req.headers["X-Timezone"]?.toString();
-    if (!timezone) {
-      console.error("[CronRoute] ❌ Missing 'x-timezone' header");
-      return res.status(400).json({ error: "Bad Request: Missing timezone" });
+    console.log("[Cron] 🚀 Starting email job");
+    
+    // Get current time in UTC
+    const now = DateTime.now().setZone("UTC");
+    
+    // Check each timezone
+    for (const timezone of cronService.getSupportedTimezones()) {
+      const timeInZone = now.setZone(timezone);
+      
+      // Only send emails if it's 9:00 AM in that timezone
+      if (timeInZone.hour === 9 && timeInZone.minute === 0) {
+        console.log(`[Cron] 📧 Sending emails for timezone: ${timezone}`);
+        await cronService.sendEmailsForTimezone(timezone);
+      }
     }
 
-    console.log(`[CronRoute] ✅ Received request for timezone: ${timezone}`);
-
-    // Process emails for the timezone
-    await cronService.sendEmailsForTimezone(timezone);
-    res.json({ success: true, message: `Processed emails for ${timezone}` });
-
+    res.json({ success: true, message: "Email job completed" });
   } catch (error) {
-    console.error("[CronRoute] ❌ Error processing email webhook:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("[Cron] ❌ Error in email job:", error);
+    res.status(500).json({ success: false, error: "Failed to process email job" });
   }
 });
 
