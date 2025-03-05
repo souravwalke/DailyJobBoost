@@ -1,4 +1,3 @@
-import { Client } from "@upstash/qstash";
 import { AppDataSource } from "../config/database";
 import { User } from "../models/User";
 import { Quote } from "../models/Quote";
@@ -11,53 +10,17 @@ export class CronService {
   private quoteRepository: Repository<Quote>;
   private emailService: EmailService;
   private quoteRotationService: QuoteRotationService;
-  private qstash: Client;
 
   constructor() {
     this.userRepository = AppDataSource.getRepository(User);
     this.quoteRepository = AppDataSource.getRepository(Quote);
     this.emailService = new EmailService();
     this.quoteRotationService = new QuoteRotationService();
-    this.qstash = new Client({
-      token: process.env.QSTASH_TOKEN || ""
-    });
   }
 
   async startDailyEmailJobs() {
-    console.log("🚀 Starting to schedule daily email jobs (TEST MODE)...");
-    
-    try {
-      // First, list and delete all existing schedules
-      console.log("🗑️ Cleaning up existing schedules...");
-      const existingSchedules = await this.qstash.schedules.list();
-      for (const schedule of existingSchedules) {
-        console.log(`Deleting schedule ${schedule.scheduleId}...`);
-        await this.qstash.schedules.delete(schedule.scheduleId);
-      }
-      console.log("✅ Existing schedules cleaned up");
-
-      // Schedule a test job that runs every minute
-      const schedule = await this.qstash.schedules.create({
-        cron: "* * * * *", // Run every minute for testing
-        destination: `${process.env.API_URL}/api/cron/send-emails`,
-        body: JSON.stringify({ 
-          checkAllTimezones: true,
-          testMode: true 
-        }),
-        headers: {
-          "Content-Type": "application/json"
-        }
-      });
-
-      console.log("✅ Scheduled test check with QStash:", {
-        scheduleId: schedule.scheduleId,
-        destination: `${process.env.API_URL}/api/cron/send-emails`,
-        cron: "* * * * *",
-        currentTime: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error("❌ Error scheduling test job:", error);
-    }
+    console.log("🚀 Starting daily email jobs (TEST MODE)...");
+    console.log("✅ Test mode enabled - will check timezones every minute");
   }
 
   async sendEmailsForTimezone(timezone: string, isTest = false) {
