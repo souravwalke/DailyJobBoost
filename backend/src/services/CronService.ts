@@ -27,6 +27,15 @@ export class CronService {
     console.log("🚀 Starting to schedule daily email jobs...");
     
     try {
+      // First, list and delete all existing schedules
+      console.log("🗑️ Cleaning up existing schedules...");
+      const existingSchedules = await this.qstash.schedules.list();
+      for (const schedule of existingSchedules) {
+        console.log(`Deleting schedule ${schedule.scheduleId}...`);
+        await this.qstash.schedules.delete(schedule.scheduleId);
+      }
+      console.log("✅ Existing schedules cleaned up");
+
       // Schedule a single job that runs every hour to check all timezones
       const schedule = await this.qstash.schedules.create({
         cron: "0 * * * *", // Run every hour
