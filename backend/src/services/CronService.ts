@@ -26,34 +26,36 @@ export class CronService {
   async startDailyEmailJobs() {
     console.log("Starting to schedule daily email jobs...");
     
-    const timezones = [
-      "America/Los_Angeles", "America/Denver", "America/Chicago", "America/New_York",
-      "GMT", "Europe/Paris", "Asia/Kolkata", "Asia/Tokyo", "Australia/Sydney"
-    ];
+    try {
+      // Schedule a single job that runs every hour to check all timezones
+      await this.qstash.schedules.create({
+        cron: "0 * * * *", // Run every hour
+        destination: `${process.env.API_URL}/api/cron/send-emails`,
+        body: JSON.stringify({ checkAllTimezones: true }),
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
 
-    for (const tz of timezones) {
-      try {
-        // Schedule job for 9:00 AM in each timezone
-        await this.qstash.schedules.create({
-          cron: "0 9 * * *",
-          destination: `${process.env.API_URL}/api/cron/send-emails`,
-          body: JSON.stringify({ timezone: tz }),
-          headers: {
-            "Content-Type": "application/json"
-          }
-        });
-
-        console.log(`Scheduled job for ${tz} at 9:00 AM local time`);
-      } catch (error) {
-        console.error(`Error scheduling job for ${tz}:`, error);
-      }
+      console.log("Scheduled hourly check for all timezones");
+    } catch (error) {
+      console.error("Error scheduling main job:", error);
     }
-
-    console.log("All daily email jobs scheduled successfully.");
   }
 
   async sendEmailsForTimezone(timezone: string) {
     try {
+      // Get current hour in the timezone
+      const now = new Date();
+      const tzTime = new Date(now.toLocaleString("en-US", { timeZone: timezone }));
+      const hour = tzTime.getHours();
+
+      // Only send emails if it's 9 AM in this timezone
+      if (hour !== 9) {
+        console.log(`Skipping ${timezone} - current hour is ${hour}`);
+        return;
+      }
+
       console.log(`Sending emails for ${timezone}...`);
       const users = await this.userRepository.find({ where: { timezone, isActive: true } });
 
@@ -72,6 +74,17 @@ export class CronService {
       console.log(`Email results for ${timezone}: Success ${successful}, Failed ${failed}`);
     } catch (error) {
       console.error(`Error sending emails for ${timezone}:`, error);
+    }
+  }
+
+  async checkAllTimezones() {
+    const timezones = [
+      "America/Los_Angeles", "America/Denver", "America/Chicago", "America/New_York",
+      "GMT", "Europe/Paris", "Asia/Kolkata", "Asia/Tokyo", "Australia/Sydney"
+    ];
+
+    for (const tz of timezones) {
+      await this.sendEmailsForTimezone(tz);
     }
   }
 }
