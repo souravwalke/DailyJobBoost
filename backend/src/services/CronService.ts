@@ -19,9 +19,7 @@ export class CronService {
     this.emailService = new EmailService();
     this.quoteRotationService = new QuoteRotationService();
     this.qstash = new Client({
-      token: process.env.QSTASH_TOKEN || "",
-      currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY || "",
-      nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY || ""
+      token: process.env.QSTASH_TOKEN || ""
     });
   }
 
