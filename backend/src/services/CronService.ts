@@ -12,9 +12,15 @@ interface QStashSchedule {
   scheduleId: string;
   destination: string;
   cron: string;
-  status: string;
+  status?: string;
   headers: Record<string, string>;
   lastRun?: string;
+  isPaused?: boolean;
+  createdAt?: number;
+  method?: string;
+  retries?: number;
+  callerIP?: string;
+  parallelism?: number;
 }
 
 // Use a Set for O(1) lookup instead of an array
@@ -36,6 +42,7 @@ export class CronService {
   private emailService: EmailService;
   private quoteRotationService: QuoteRotationService;
   private qstash: Client;
+  private apiUrl: string;
 
   constructor() {
     if (!process.env.QSTASH_TOKEN || !process.env.API_URL) {
@@ -47,6 +54,7 @@ export class CronService {
     this.emailService = new EmailService();
     this.quoteRotationService = new QuoteRotationService();
     this.qstash = new Client({ token: process.env.QSTASH_TOKEN });
+    this.apiUrl = process.env.API_URL.replace(/;$/, '');
   }
 
   getSupportedTimezones(): string[] {
@@ -62,11 +70,11 @@ export class CronService {
     // Create a single schedule that runs every hour
     try {
       console.log("[CronService] 📝 Creating new schedule...");
-      console.log("[CronService] 🔗 API URL:", process.env.API_URL);
+      console.log("[CronService] 🔗 API URL:", this.apiUrl);
       
       const schedule = await this.qstash.schedules.create({
         cron: "0 * * * *", // Run at minute 0 of every hour
-        destination: `${process.env.API_URL}/api/cron/send-emails`,
+        destination: `${this.apiUrl}/api/cron/send-emails`,
         retries: 3,
         headers: {
           "Content-Type": "application/json"
@@ -82,7 +90,7 @@ export class CronService {
 
       // Wait a moment for the schedule to be fully created
       console.log("[CronService] ⏳ Waiting for schedule to be fully created...");
-      await new Promise(resolve => setTimeout(resolve, 5000)); // Increased wait time
+      await new Promise(resolve => setTimeout(resolve, 5000));
 
       // Get the schedule details
       console.log("[CronService] 🔍 Fetching schedule details...");
@@ -92,21 +100,23 @@ export class CronService {
       // Check if the schedule is active
       if (!createdSchedule) {
         console.warn("[CronService] ⚠️ Schedule not found after creation");
-      } else if (!createdSchedule.status) {
-        console.warn("[CronService] ⚠️ Schedule status is undefined, but schedule exists");
-        // Try to list all schedules to see if we can find it
-        const allSchedules = await this.qstash.schedules.list();
-        console.log("[CronService] 📋 All schedules:", JSON.stringify(allSchedules, null, 2));
-      } else if (createdSchedule.status !== "active") {
-        console.warn("[CronService] ⚠️ Schedule status:", createdSchedule.status);
+      } else if (createdSchedule.isPaused) {
+        console.warn("[CronService] ⚠️ Schedule is paused");
       } else {
-        console.log("[CronService] ✅ Schedule is active");
+        console.log("[CronService] ✅ Schedule is created and not paused");
+        console.log("[CronService] 📊 Schedule details:", {
+          id: createdSchedule.scheduleId,
+          destination: createdSchedule.destination,
+          cron: createdSchedule.cron,
+          retries: createdSchedule.retries,
+          isPaused: createdSchedule.isPaused,
+          createdAt: new Date(createdSchedule.createdAt || 0).toISOString()
+        });
       }
 
       console.log("[CronService] ✅ Schedule setup completed");
     } catch (error) {
       console.error(`[CronService] ❌ Failed to schedule email job:`, error);
-      // Log the full error details
       if (error instanceof Error) {
         console.error("[CronService] Error details:", {
           name: error.name,
@@ -114,8 +124,6 @@ export class CronService {
           stack: error.stack
         });
       }
-      // Don't throw the error, just log it
-      // This allows the server to start even if the schedule isn't perfect
     }
 
     console.log("[CronService] ✅ Schedule creation process completed");
@@ -213,11 +221,11 @@ export class CronService {
 
     return {
       total: emailSchedules.length,
-      active: emailSchedules.filter(s => s.status === 'active').length,
-      inactive: emailSchedules.filter(s => s.status !== 'active').length,
+      active: emailSchedules.filter(s => !s.isPaused).length,
+      inactive: emailSchedules.filter(s => s.isPaused).length,
       schedules: emailSchedules.map(s => ({
-        timezone: s.headers?.["x-timezone"]?.toString() || s.headers?.["X-Timezone"]?.toString(),
-        status: s.status,
+        timezone: s.headers?.["x-timezone"]?.toString() || s.headers?.["X-Timezone"]?.toString() || "unknown",
+        status: s.isPaused ? "paused" : "active",
         lastRun: s.lastRun
       }))
     };
