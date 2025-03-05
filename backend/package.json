@@ -7,7 +7,6 @@
     "dev": "nodemon",
     "prebuild": "rm -rf dist",
     "build": "tsc",
-    "prestart": "rm -rf node_modules/@upstash",
     "start": "node dist/index.js",
     "typeorm": "typeorm-ts-node-commonjs -d src/config/database.ts",
     "prepare:prod": "npm ci && npm run build && npm run typeorm migration:run",
