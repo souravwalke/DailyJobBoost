@@ -40,8 +40,8 @@ app.use(
 );
 app.use(express.json());
 
-// Enhanced health check endpoint
-app.get("/health", async (req, res) => {
+// Enhanced health check endpoint (both /health and /api/health)
+const healthCheck = async (req: express.Request, res: express.Response) => {
   try {
     // Check database connection
     const dbStatus = isDbConnected && AppDataSource.isInitialized;
@@ -69,7 +69,11 @@ app.get("/health", async (req, res) => {
       timestamp: new Date().toISOString()
     });
   }
-});
+};
+
+// Register health check endpoints at both paths
+app.get("/health", healthCheck);
+app.get("/api/health", healthCheck);
 
 // Routes
 app.use("/api/auth", authRouter);
