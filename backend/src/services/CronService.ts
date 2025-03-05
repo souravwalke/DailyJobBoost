@@ -36,6 +36,19 @@ export const SUPPORTED_TIMEZONES = new Set([
   "Australia/Sydney"
 ]);
 
+// Timezone offset mapping for cron expressions
+const TIMEZONE_OFFSETS: Record<string, number> = {
+  "America/Los_Angeles": -8,
+  "America/Denver": -7,
+  "America/Chicago": -6,
+  "America/New_York": -5,
+  "GMT": 0,
+  "Europe/Paris": 1,
+  "Asia/Kolkata": 5.5,
+  "Asia/Tokyo": 9,
+  "Australia/Sydney": 11
+};
+
 export class CronService {
   private userRepository: Repository<User>;
   private quoteRepository: Repository<Quote>;
@@ -61,8 +74,30 @@ export class CronService {
     return Array.from(SUPPORTED_TIMEZONES);
   }
 
-  async startDailyEmailJobs() {
+  private getCronForTimezone(timezone: string): string {
+    const offset = TIMEZONE_OFFSETS[timezone];
+    if (offset === undefined) {
+      throw new Error(`Unknown timezone offset for ${timezone}`);
+    }
+
+    // Calculate the hour in UTC when it's 9 AM in the target timezone
+    let utcHour = (9 - offset + 24) % 24;
     
+    // Handle fractional offsets (like for India which is UTC+5:30)
+    if (offset % 1 !== 0) {
+      // For half-hour offsets, we'll schedule 30 minutes before or after
+      const minutes = Math.round((offset % 1) * 60);
+      return `${minutes} ${Math.floor(utcHour)} * * *`; // Adjusting minutes for fractional timezone offsets
+    }
+
+    // Handle day wraparound
+    if (utcHour < 0) utcHour += 24;
+    if (utcHour >= 24) utcHour -= 24;
+
+    return `0 ${utcHour} * * *`;
+  }
+
+  async startDailyEmailJobs() {
     console.log("[CronService] 🚀 Setting up QStash schedules for each timezone...");
     
     // First, clean up any existing schedules
@@ -70,13 +105,15 @@ export class CronService {
 
     for (const timezone of SUPPORTED_TIMEZONES) {
         try {
-          console.log(`[CronService] 📝 Creating schedule for ${timezone}...`);
+          const cronExpression = this.getCronForTimezone(timezone);
+          console.log(`[CronService] 📝 Creating schedule for ${timezone} with cron: ${cronExpression}`);
+          
           const schedule = await this.qstash.schedules.create({
-            cron: "0 9 * * *",
+            cron: cronExpression,
             destination: `${this.apiUrl}/api/cron/send-emails`,
             headers: {
               "Content-Type": "application/json",
-              "x-timezone": timezone // Pass the timezone
+              "x-timezone": timezone
             }
           });
           console.log(`[CronService] ✅ Created schedule for ${timezone} (ID: ${schedule.scheduleId})`);
@@ -88,7 +125,6 @@ export class CronService {
 
     console.log("[CronService] ✅ All per-timezone schedules have been created successfully");
   }
-
 
   private async cleanupSchedules() {
     try {
