@@ -11,20 +11,33 @@ export class CronService {
   private quoteRepository: Repository<Quote>;
   private emailService: EmailService;
   private quoteRotationService: QuoteRotationService;
-  private qstash: Client;
+  private qstash: Client | null = null;
 
   constructor() {
     this.userRepository = AppDataSource.getRepository(User);
     this.quoteRepository = AppDataSource.getRepository(Quote);
     this.emailService = new EmailService();
     this.quoteRotationService = new QuoteRotationService();
-    this.qstash = new Client({
-      token: process.env.QSTASH_TOKEN || "",
-    });
+    
+    const qstashToken = process.env.QSTASH_TOKEN;
+    if (!qstashToken) {
+      console.warn("⚠️ QSTASH_TOKEN not found in environment variables. QStash scheduling will be disabled.");
+    } else {
+      try {
+        this.qstash = new Client({ token: qstashToken });
+      } catch (error) {
+        console.error("❌ Failed to initialize QStash client:", error);
+      }
+    }
   }
 
   async startDailyEmailJobs() {
     console.log("🚀 Starting to schedule daily email jobs (TEST MODE)...");
+    
+    if (!this.qstash) {
+      console.error("❌ Cannot schedule jobs: QStash client not initialized");
+      return;
+    }
     
     try {
       // First, list and delete all existing schedules
@@ -37,9 +50,14 @@ export class CronService {
       console.log("✅ Existing schedules cleaned up");
 
       // Schedule a test job that runs every minute
+      const apiUrl = process.env.API_URL;
+      if (!apiUrl) {
+        throw new Error("API_URL environment variable is not set");
+      }
+
       const schedule = await this.qstash.schedules.create({
         cron: "* * * * *", // Run every minute for testing
-        destination: `${process.env.API_URL}/api/cron/send-emails`,
+        destination: `${apiUrl}/api/cron/send-emails`,
         body: JSON.stringify({ 
           checkAllTimezones: true,
           testMode: true 
@@ -51,12 +69,13 @@ export class CronService {
 
       console.log("✅ Scheduled test check with QStash:", {
         scheduleId: schedule.scheduleId,
-        destination: `${process.env.API_URL}/api/cron/send-emails`,
+        destination: `${apiUrl}/api/cron/send-emails`,
         cron: "* * * * *",
         currentTime: new Date().toISOString()
       });
     } catch (error) {
       console.error("❌ Error scheduling test job:", error);
+      throw error; // Re-throw to handle it in the calling code
     }
   }
 
