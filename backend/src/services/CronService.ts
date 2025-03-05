@@ -24,7 +24,7 @@ export class CronService {
   }
 
   async startDailyEmailJobs() {
-    console.log("🚀 Starting to schedule daily email jobs...");
+    console.log("🚀 Starting to schedule daily email jobs (TEST MODE)...");
     
     try {
       // First, list and delete all existing schedules
@@ -36,46 +36,57 @@ export class CronService {
       }
       console.log("✅ Existing schedules cleaned up");
 
-      // Schedule a single job that runs every hour to check all timezones
+      // Schedule a test job that runs every minute
       const schedule = await this.qstash.schedules.create({
-        cron: "0 * * * *", // Run every hour
+        cron: "* * * * *", // Run every minute for testing
         destination: `${process.env.API_URL}/api/cron/send-emails`,
-        body: JSON.stringify({ checkAllTimezones: true }),
+        body: JSON.stringify({ 
+          checkAllTimezones: true,
+          testMode: true 
+        }),
         headers: {
           "Content-Type": "application/json"
         }
       });
 
-      console.log("✅ Scheduled hourly check with QStash:", {
+      console.log("✅ Scheduled test check with QStash:", {
         scheduleId: schedule.scheduleId,
         destination: `${process.env.API_URL}/api/cron/send-emails`,
-        cron: "0 * * * *"
+        cron: "* * * * *",
+        currentTime: new Date().toISOString()
       });
     } catch (error) {
-      console.error("❌ Error scheduling main job:", error);
+      console.error("❌ Error scheduling test job:", error);
     }
   }
 
-  async sendEmailsForTimezone(timezone: string) {
+  async sendEmailsForTimezone(timezone: string, isTest = false) {
     try {
-      // Get current hour in the timezone
+      // Get current time in the timezone
       const now = new Date();
       const tzTime = new Date(now.toLocaleString("en-US", { timeZone: timezone }));
       const hour = tzTime.getHours();
+      const minute = tzTime.getMinutes();
 
       console.log(`🕒 Checking ${timezone}:`, {
         currentTime: tzTime.toLocaleString(),
         hour,
-        targetHour: 9
+        minute,
+        targetTime: isTest ? '23:45' : '09:00',
+        isTestMode: isTest
       });
 
-      // Only send emails if it's 9 AM in this timezone
-      if (hour !== 9) {
-        console.log(`⏭️ Skipping ${timezone} - current hour is ${hour}`);
+      // For test mode, send email at 11:45 PM PST
+      const shouldSendEmail = isTest 
+        ? (timezone === 'America/Los_Angeles' && hour === 23 && minute === 45)
+        : (hour === 9);
+
+      if (!shouldSendEmail) {
+        console.log(`⏭️ Skipping ${timezone} - Current time: ${hour}:${minute.toString().padStart(2, '0')}`);
         return;
       }
 
-      console.log(`📬 Sending emails for ${timezone}...`);
+      console.log(`📬 ${isTest ? 'TEST MODE:' : ''} Sending emails for ${timezone}...`);
       const users = await this.userRepository.find({ where: { timezone, isActive: true } });
 
       if (!users.length) {
@@ -87,11 +98,12 @@ export class CronService {
       const quote = await this.quoteRotationService.getNextQuoteForTimezone(users);
       console.log(`💭 Selected quote: "${quote.content}" by ${quote.author || 'Anonymous'}`);
 
+      // Actually send emails even in test mode
       const results = await Promise.allSettled(users.map(user => this.emailService.sendDailyQuote(user, quote)));
       const successful = results.filter(r => r.status === "fulfilled").length;
       const failed = results.filter(r => r.status === "rejected").length;
 
-      console.log(`📊 Email results for ${timezone}: Success ${successful}, Failed ${failed}`);
+      console.log(`📊 ${isTest ? 'TEST ' : ''}Email results for ${timezone}: Success ${successful}, Failed ${failed}`);
     } catch (error) {
       console.error(`❌ Error sending emails for ${timezone}:`, error);
     }
@@ -103,10 +115,13 @@ export class CronService {
       "GMT", "Europe/Paris", "Asia/Kolkata", "Asia/Tokyo", "Australia/Sydney"
     ];
 
-    console.log(`🌍 Checking all timezones at ${new Date().toISOString()}`);
+    const isTestMode = true; // Enable test mode
+    console.log(`🌍 TEST MODE: Checking all timezones at ${new Date().toISOString()}`);
+    
     for (const tz of timezones) {
-      await this.sendEmailsForTimezone(tz);
+      await this.sendEmailsForTimezone(tz, isTestMode);
     }
-    console.log(`✅ Completed timezone checks at ${new Date().toISOString()}`);
+    
+    console.log(`✅ Completed test timezone checks at ${new Date().toISOString()}`);
   }
 }
