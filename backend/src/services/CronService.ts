@@ -62,6 +62,8 @@ export class CronService {
     // Create a single schedule that runs every hour
     try {
       console.log("[CronService] 📝 Creating new schedule...");
+      console.log("[CronService] 🔗 API URL:", process.env.API_URL);
+      
       const schedule = await this.qstash.schedules.create({
         cron: "0 * * * *", // Run at minute 0 of every hour
         destination: `${process.env.API_URL}/api/cron/send-emails`,
@@ -76,24 +78,42 @@ export class CronService {
       }
 
       console.log(`[CronService] ✅ Schedule created with ID: ${schedule.scheduleId}`);
+      console.log("[CronService] 📋 Initial schedule response:", JSON.stringify(schedule, null, 2));
 
       // Wait a moment for the schedule to be fully created
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log("[CronService] ⏳ Waiting for schedule to be fully created...");
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Increased wait time
 
       // Get the schedule details
+      console.log("[CronService] 🔍 Fetching schedule details...");
       const createdSchedule = await this.qstash.schedules.get(schedule.scheduleId) as unknown as QStashSchedule;
       console.log("[CronService] 📋 Schedule details:", JSON.stringify(createdSchedule, null, 2));
 
       // Check if the schedule is active
-      if (!createdSchedule || createdSchedule.status !== "active") {
-        console.warn("[CronService] ⚠️ Schedule status:", createdSchedule?.status || "undefined");
-        // Don't throw an error, just log a warning
-        // The schedule might take a moment to become active
+      if (!createdSchedule) {
+        console.warn("[CronService] ⚠️ Schedule not found after creation");
+      } else if (!createdSchedule.status) {
+        console.warn("[CronService] ⚠️ Schedule status is undefined, but schedule exists");
+        // Try to list all schedules to see if we can find it
+        const allSchedules = await this.qstash.schedules.list();
+        console.log("[CronService] 📋 All schedules:", JSON.stringify(allSchedules, null, 2));
+      } else if (createdSchedule.status !== "active") {
+        console.warn("[CronService] ⚠️ Schedule status:", createdSchedule.status);
+      } else {
+        console.log("[CronService] ✅ Schedule is active");
       }
 
       console.log("[CronService] ✅ Schedule setup completed");
     } catch (error) {
       console.error(`[CronService] ❌ Failed to schedule email job:`, error);
+      // Log the full error details
+      if (error instanceof Error) {
+        console.error("[CronService] Error details:", {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
+      }
       // Don't throw the error, just log it
       // This allows the server to start even if the schedule isn't perfect
     }
