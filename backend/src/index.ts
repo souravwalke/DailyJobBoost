@@ -12,6 +12,8 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+let isDbConnected = false;
+let isServerReady = false;
 
 // Log environment configuration (excluding sensitive data)
 console.log('Starting server with configuration:', {
@@ -32,15 +34,41 @@ if (!process.env.FRONTEND_URL) {
 // CORS configuration
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL,
+    origin: process.env.FRONTEND_URL || '*',
     credentials: true,
   })
 );
 app.use(express.json());
 
-// Add health check endpoint before database connection
-app.get("/health", (req, res) => {
-  res.status(200).json({ status: "healthy" });
+// Enhanced health check endpoint
+app.get("/health", async (req, res) => {
+  try {
+    // Check database connection
+    const dbStatus = isDbConnected && AppDataSource.isInitialized;
+    
+    // Basic application status
+    const status = {
+      status: dbStatus && isServerReady ? "healthy" : "unhealthy",
+      timestamp: new Date().toISOString(),
+      database: dbStatus ? "connected" : "disconnected",
+      server: isServerReady ? "ready" : "starting",
+      uptime: process.uptime()
+    };
+
+    // Send appropriate status code
+    const statusCode = status.status === "healthy" ? 200 : 503;
+    res.status(statusCode).json(status);
+    
+    // Log health check result
+    console.log("Health check result:", status);
+  } catch (error) {
+    console.error("Health check failed:", error);
+    res.status(503).json({
+      status: "unhealthy",
+      error: "Health check failed",
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Routes
@@ -52,10 +80,14 @@ app.use("/api/cron", cronRouter);
 // Keep track of server state
 let isShuttingDown = false;
 
-// Keep-alive ping
+// Keep-alive ping with more details
 const sendKeepAlivePing = () => {
   if (!isShuttingDown) {
-    console.log(`Keep-alive ping at ${new Date().toISOString()}`);
+    console.log(`Keep-alive ping at ${new Date().toISOString()}`, {
+      dbConnected: isDbConnected,
+      serverReady: isServerReady,
+      uptime: process.uptime()
+    });
   }
 };
 
@@ -64,6 +96,7 @@ async function connectWithRetry(retries = 5, interval = 5000) {
   for (let i = 0; i < retries; i++) {
     try {
       await AppDataSource.initialize();
+      isDbConnected = true;
       console.log("Database connected successfully");
       return true;
     } catch (error) {
@@ -88,6 +121,7 @@ const handleShutdown = async () => {
     // Close database connection
     if (AppDataSource.isInitialized) {
       await AppDataSource.destroy();
+      isDbConnected = false;
       console.log("Database connection closed");
     }
     
@@ -101,6 +135,8 @@ const handleShutdown = async () => {
 // Start the server
 async function startServer() {
   try {
+    console.log("Starting server initialization...");
+    
     // Connect to database
     const dbConnected = await connectWithRetry();
     if (!dbConnected) {
@@ -114,11 +150,18 @@ async function startServer() {
     console.log("Cron service initialized and jobs started");
 
     // Start server
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
+      isServerReady = true;
       console.log(`Server is running on port ${PORT}`);
       console.log(`Environment: ${process.env.NODE_ENV}`);
       console.log(`Database URL: ${process.env.DATABASE_URL ? 'Configured' : 'Not configured'}`);
       console.log(`SMTP Configuration: ${process.env.SMTP_HOST ? 'Configured' : 'Not configured'}`);
+    });
+
+    // Add error handler for server
+    server.on('error', (error) => {
+      console.error('Server error:', error);
+      isServerReady = false;
     });
 
     // Start keep-alive mechanism
@@ -131,6 +174,7 @@ async function startServer() {
     // Handle uncaught errors
     process.on('uncaughtException', (error) => {
       console.error('Uncaught Exception:', error);
+      isServerReady = false;
       // Don't exit the process
     });
 
